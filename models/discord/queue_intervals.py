@@ -14,4 +14,3 @@ class QueueIntervals(models.Model):
     qi_created_at = models.DateTimeField()
     qi_at = models.CharField(max_length=16)
     qi_channel = models.CharField(max_length=255, blank=True, null=True)
-
