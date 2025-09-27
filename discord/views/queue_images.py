@@ -3,16 +3,10 @@ from models.discord import QueuePictures, QueueIntervals
 
 
 class QueueImages(BaseView):
-    http_method_names = ['post']
+    http_method_names = ["post"]
 
     def execute_post(
-            self,
-            interval_name,
-            channel_name,
-            user_id,
-            urls,
-            at,
-            interval_description=None
+        self, interval_name, channel_name, user_id, urls, at, interval_description=None
     ):
         new_queue = False
 
@@ -28,23 +22,18 @@ class QueueImages(BaseView):
                 qi_name=interval_name,
                 qi_channel=channel_name,
                 qi_description=interval_description,
-                qi_at=at
+                qi_at=at,
             )
             new_queue = True
 
         queue_images = []
 
         for url in urls:
-            queue_images.append(
-                QueuePictures(
-                    qp_image=url,
-                    qp_interval_id=interval
-                )
-            )
+            queue_images.append(QueuePictures(qp_image=url, qp_interval_id=interval))
 
         QueuePictures.objects.bulk_create(queue_images, batch_size=20)
 
         if new_queue:
-            return f'New Queue Created'
+            return f"New Queue Created"
 
-        return f'Successfully added more images to queue: **{interval.qi_name}**'
+        return f"Successfully added more images to queue: **{interval.qi_name}**"

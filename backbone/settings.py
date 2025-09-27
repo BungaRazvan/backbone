@@ -34,12 +34,8 @@ DEBUG = env("DEBUG")
 
 ALLOWED_HOSTS = ["localhost"]
 
-IS_DEV = env("ENV") == "dev"
-
 # Application definition
 
-PROJECT_ROOT = os.path.dirname(__file__)
-sys.path.insert(0, os.path.join(PROJECT_ROOT, "applications"))
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -48,7 +44,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "applications.discord",
+    #
+    "discord",
 ]
 
 MIDDLEWARE = [
