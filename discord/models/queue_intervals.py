@@ -3,9 +3,8 @@ from django.db import models
 
 class QueueIntervals(models.Model):
     class Meta:
-        managed = False
-        db_table = 'queue_intervals'
-        app_label = 'discord'
+        db_table = "queue_intervals"
+        app_label = "discord"
 
     qi_id = models.AutoField(primary_key=True)
     qi_description = models.CharField(max_length=255, blank=True, null=True)

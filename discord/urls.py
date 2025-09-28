@@ -1,5 +1,5 @@
 from django.urls import path
 
-from discord.views.get_queue_images import GetQueueImages
+from discord.views import GetYoutubeTracksView
 
-urlpatterns = [path("get-queue-images/", GetQueueImages.as_view())]
+urlpatterns = [path("get-youtube-tracks", GetYoutubeTracksView.as_view())]
