@@ -1,6 +1,7 @@
 FROM python:3.11-slim-bullseye
 
-RUN mkdir app
+USER root
+RUN mkdir -p /app && chmod -R 755 /app
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONNUNBUFFERED=1
