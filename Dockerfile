@@ -1,16 +1,18 @@
-FROM python:3.11-slim
+FROM python:3.11-slim-bullseye
 
 RUN mkdir app
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONNUNBUFFERED=1
 
+RUN python -m pip install --upgrade pip setuptools wheel
+
 WORKDIR /app
 
-COPY requirements.txt .
+COPY . .
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
 
 RUN chmod +x manage.py
 
