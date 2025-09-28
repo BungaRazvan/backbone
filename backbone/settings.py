@@ -38,6 +38,8 @@ ALLOWED_HOSTS = ["localhost"]
 
 
 INSTALLED_APPS = [
+    "discord",
+    #
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -45,7 +47,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     #
-    "discord",
+    "rest_framework",
 ]
 
 MIDDLEWARE = [

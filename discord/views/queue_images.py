@@ -1,14 +1,15 @@
+import json
+
 from django.views import View
 
 from discord.models import QueuePictures, QueueIntervals
-import json
 from django.http import JsonResponse
 
 
 class QueueImages(View):
     http_method_names = ["post"]
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         try:
             body = json.loads(request.body.decode("utf-8"))
         except json.JSONDecodeError:

@@ -12,4 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN chmod +x manage.py
+
+RUN ./manage.py migrate
+
 CMD ["gunicorn", "backbone.wsgi:application", "--bind", "0.0.0.0:8000"]
