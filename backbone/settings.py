@@ -39,6 +39,7 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
 INSTALLED_APPS = [
     "discord",
+    "extension",
     #
     "django.contrib.admin",
     "django.contrib.auth",
@@ -91,12 +92,16 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     },
     "discord_db": {
-        "NAME": "discord_db.sqlite3",
+        "NAME": BASE_DIR / "discord_db.sqlite3",
+        "ENGINE": "django.db.backends.sqlite3",
+    },
+    "extension_db": {
+        "NAME": "extension_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
     },
 }
 
-DATABASE_ROUTERS = ["routers.DiscordRouter"]
+DATABASE_ROUTERS = ["routers.DiscordRouter", "routers.ExtensionRouter"]
 
 
 # Password validation
