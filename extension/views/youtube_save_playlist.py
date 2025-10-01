@@ -3,9 +3,13 @@ from django.http import HttpResponseBadRequest, HttpResponse
 
 import json
 from discord.views.get_youtube_tracks import get_videos, get_youtube_info
-from extension.models import YoutubePlaylists
+from extension.models import YoutubePlaylist
+from django.views.decorators.csrf import csrf_exempt
+
+from django.utils.decorators import method_decorator
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class YoutubeSavePlaylist(View):
     http_method_names = ["post"]
 
@@ -31,9 +35,9 @@ class YoutubeSavePlaylist(View):
         if not videos:
             return HttpResponseBadRequest("No videos found")
 
-        obj, created = YoutubePlaylists.object.get_or_create(
+        obj, created = YoutubePlaylist.objects.get_or_create(
             yp_name=data.get("title"),
-            defults={"yp_name": data.get("title"), "yp_vidoes": videos},
+            defaults={"yp_name": data.get("title"), "yp_videos": videos},
         )
 
         if not created:

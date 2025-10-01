@@ -1,1 +1,1 @@
-from .youtube_playlist import YoutubePlaylists
+from .youtube_playlist import YoutubePlaylist

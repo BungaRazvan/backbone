@@ -6,7 +6,7 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.utils.decorators import method_decorator
-from extension.models import YoutubePlaylists
+from extension.models import YoutubePlaylist
 
 
 @method_decorator(xframe_options_exempt, name="dispatch")
@@ -28,10 +28,10 @@ class YoutubePlaylistMissingVideos(TemplateView):
         youtube_videos = get_videos(youtube_data)
 
         try:
-            saved_videos = YoutubePlaylists.objects.get(
+            saved_videos = YoutubePlaylist.objects.get(
                 yp_name=youtube_data.get("title")
             ).yp_videos
-        except YoutubePlaylists.DoesNotExist:
+        except YoutubePlaylist.DoesNotExist:
             return "<h1>Youtube playlist not saved</h1>"
 
         saved_titles = [v.get("title") for v in saved_videos]
@@ -44,7 +44,6 @@ class YoutubePlaylistMissingVideos(TemplateView):
         )
 
     def get(self, request, *args, **kwargs):
-        print(kwargs.get("url"), request.headers.get("Hx-Trigger") == "video-list")
         if kwargs.get("url") and request.headers.get("Hx-Trigger") == "videos-list":
             html = self.render_missing_videos(kwargs.get("url"))
             return HttpResponse(html)

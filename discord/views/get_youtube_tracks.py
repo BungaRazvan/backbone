@@ -44,10 +44,6 @@ def get_videos(data):
 
     tracks = []
 
-    import json
-
-    print(json.dumps(data, indent=2))
-
     if "entries" in data:
         # Playlist
         for entry in data["entries"]:

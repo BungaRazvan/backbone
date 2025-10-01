@@ -1,9 +1,9 @@
 from django.db import models
 
 
-class YoutubePlaylists(models.Model):
+class YoutubePlaylist(models.Model):
     class Meta:
-        db_table = "youtube_playlists"
+        db_table = "youtube_playlist"
         app_label = "extension"
 
     yp_name = models.CharField(max_length=255)
