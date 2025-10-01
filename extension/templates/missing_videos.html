@@ -1,0 +1,31 @@
+{% extends 'base.html' %} {% block styles %}
+<style>
+  #spinner.htmx-request {
+    display: flex !important; /* show spinner during the request */
+  }
+</style>
+
+{% endblock %} {% block content %}
+
+<div class="max-w-3xl mx-auto bg-white p-6 rounded shadow">
+  <h1 class="text-2xl font-bold mb-4">Missing Videos</h1>
+
+  <!-- Spinner -->
+  <div id="spinner" class="hidden justify-center my-4">
+    <div
+      class="w-10 h-10 border-4 border-blue-500 border-dashed rounded-full animate-spin"
+    ></div>
+  </div>
+
+  <div
+    id="videos-list"
+    hx-get="/extension/youtube-playlist-missing-videos/{{ playlist_url|urlencode }}"
+    hx-trigger="load"
+    hx-indicator="#spinner"
+    hx-swap="innerHTML"
+  >
+    <!-- Missing videos will be injected here -->
+  </div>
+</div>
+
+{% endblock %}

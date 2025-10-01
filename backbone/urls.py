@@ -17,4 +17,7 @@ Including another URLconf
 from django.urls import path, include
 
 
-urlpatterns = [path("discord/", include("discord.urls"))]
+urlpatterns = [
+    path("discord/", include("discord.urls")),
+    path("extension/", include("extension.urls")),
+]

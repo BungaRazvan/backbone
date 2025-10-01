@@ -82,6 +82,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backbone.wsgi.application"
 
+DB_FOLDER = BASE_DIR / "databases"
+
 
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
@@ -89,19 +91,23 @@ WSGI_APPLICATION = "backbone.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": DB_FOLDER / "db.sqlite3",
     },
     "discord_db": {
-        "NAME": BASE_DIR / "discord_db.sqlite3",
+        "NAME": DB_FOLDER / "discord_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
     },
     "extension_db": {
-        "NAME": "extension_db.sqlite3",
+        "NAME": DB_FOLDER / "extension_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
     },
 }
 
-DATABASE_ROUTERS = ["routers.DiscordRouter", "routers.ExtensionRouter"]
+DATABASE_ROUTERS = [
+    "routers.DefaultRouter",
+    "routers.DiscordRouter",
+    "routers.ExtensionRouter",
+]
 
 
 # Password validation

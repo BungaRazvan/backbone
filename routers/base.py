@@ -28,10 +28,10 @@ class BaseRouter:
         ):
             return True
 
-        return False
+        return None
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         if app_label in self.route_app_labels:
             return db == self.db_name
 
-        return False
+        return None

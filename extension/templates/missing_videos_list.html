@@ -1,0 +1,7 @@
+<ul class="list-disc pl-5 space-y-1">
+  {% for video in missing_videos %}
+  <li>{{ video.title }}</li>
+  {% empty %}
+  <li class="text-green-500">No missing videos!</li>
+  {% endfor %}
+</ul>
