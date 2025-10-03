@@ -7,3 +7,4 @@ packaging==25.0
 sqlparse==0.5.3
 typing_extensions==4.15.0
 yt-dlp==2025.9.26
+sentry-sdk==2.39.0

@@ -14,6 +14,8 @@ import sys
 import environ
 import os
 
+import sentry_sdk
+
 from pathlib import Path
 
 
@@ -31,6 +33,11 @@ SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=False)
+
+if not DEBUG:
+    sentry_sdk.init(
+        dsn=env("SENTRY_DSN"), send_default_pii=True, environment=env("ENV")
+    )
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 

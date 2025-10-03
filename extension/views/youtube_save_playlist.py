@@ -14,7 +14,6 @@ class YoutubeSavePlaylist(View):
     http_method_names = ["post"]
 
     def post(self, request):
-        print(request.body)
 
         try:
             data = json.loads(request.body)
@@ -24,7 +23,6 @@ class YoutubeSavePlaylist(View):
         if not data.get("url"):
             return HttpResponseBadRequest("Invalid request")
 
-        # fixme
         data = get_youtube_info(
             "https://www.youtube.com/playlist?list=" + data.get("url")
         )

@@ -9,6 +9,6 @@ docker run -d   --name backbone   -p 8000:8000   --env-file /home/pi/projects/ba
 
 docker run exec -t ./manage.py migrate
 
-docker run exec -t ./manage.py migrate --database=discord
+docker run exec -t ./manage.py migrate --database=discord_db
 
-docker run exec -t ./manage.py migrate --database=extension
+docker run exec -t ./manage.py migrate --database=extension_db
