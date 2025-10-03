@@ -8,7 +8,17 @@
 {% endblock %} {% block content %}
 
 <div class="text-white max-w-3xl mx-auto bg-zinc-950 p-6 rounded shadow">
-  <h1 class="text-2xl font-bold mb-4">Missing Videos</h1>
+  <button
+    class="px-4 py-2 bg-blue-600 text-white rounded mb-2"
+    hx-post="/extension/youtube-save-playlist"
+    hx-ext="json-enc"
+    hx-headers='{"Content-Type": "application/json"}'
+    hx-vals='{"url": "{{ playlist_url }}"}'
+    hx-on::after-request="htmx.trigger('#videos-list', 'reload_videos')"
+    id="save-btn"
+  >
+    Save & Reload
+  </button>
 
   <!-- Spinner -->
   <div id="spinner" class="hidden justify-center my-4">
@@ -20,9 +30,10 @@
   <div
     id="videos-list"
     hx-get="/extension/youtube-playlist-missing-videos/{{ playlist_url|urlencode }}"
-    hx-trigger="load"
+    hx-trigger="load, reload_videos"
     hx-indicator="#spinner"
     hx-swap="innerHTML"
+    hx-on="htmx:beforeRequest: this.innerHTML = ''"
   >
     <!-- Missing videos will be injected here -->
   </div>

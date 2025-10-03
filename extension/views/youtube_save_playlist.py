@@ -14,6 +14,7 @@ class YoutubeSavePlaylist(View):
     http_method_names = ["post"]
 
     def post(self, request):
+        print(request.body)
 
         try:
             data = json.loads(request.body)
