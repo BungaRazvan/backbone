@@ -9,7 +9,7 @@ docker run -d \
     --name backbone \
     -p 8000:8000 \
     --env-file /home/pi/projects/backbone/.env.prod \
-    -v /home/pi/projects/backbone/databases:/app/database \
+    -v /home/pi/projects/backbone/databases:/app/databases \
     -v /home/pi/projects/backbone/staticfiles:/app/staticfiles \
     --security-opt seccomp=unconfined \
     backbone:latest
