@@ -7,3 +7,6 @@ services:
     env_file:
       - .env.prod
     restart: always
+    volumes:
+      - /home/pi/projects/backbone/db:/app/db
+      - /home/pi/projects/backbone/staticfiles:/app/staticfiles
