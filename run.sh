@@ -11,7 +11,8 @@ docker run -d \
     --env-file /home/pi/projects/backbone/.env.prod \
     -v /home/pi/projects/backbone/databases:/app/database \
     -v /home/pi/projects/backbone/staticfiles:/app/staticfiles \
-    --security-opt seccomp=unconfined   backbone:latest
+    --security-opt seccomp=unconfined \
+    backbone:latest
 
 sleep 5
 
