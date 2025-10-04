@@ -1,10 +1,7 @@
-from django.db import models
+from common.models.youtube_playlist import BaseYoutubePlaylist
 
 
-class YoutubePlaylist(models.Model):
+class YoutubePlaylist(BaseYoutubePlaylist):
     class Meta:
         db_table = "youtube_playlist"
         app_label = "extension"
-
-    yp_name = models.CharField(max_length=255)
-    yp_videos = models.JSONField()

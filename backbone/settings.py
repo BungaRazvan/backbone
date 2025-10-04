@@ -47,6 +47,7 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 INSTALLED_APPS = [
     "discord",
     "extension",
+    "common",
     #
     "django.contrib.admin",
     "django.contrib.auth",

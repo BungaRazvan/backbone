@@ -12,7 +12,7 @@
     class="px-4 py-2 bg-blue-600 text-white rounded mb-2"
     hx-post="/extension/youtube-save-playlist"
     hx-ext="json-enc"
-    hx-headers='{"Content-Type": "application/json"}'
+    hx-headers='{"Content-Type": "application/json", "X-API-KEY": "{{ token }}"}'
     hx-vals='{"url": "{{ playlist_url }}"}'
     hx-on::after-request="htmx.trigger('#videos-list', 'reload_videos')"
     id="save-btn"
@@ -29,7 +29,7 @@
 
   <div
     id="videos-list"
-    hx-get="/extension/youtube-playlist-missing-videos/{{ playlist_url|urlencode }}"
+    hx-get="/extension/youtube-playlist-missing-videos/{{ token }}/{{ playlist_url|urlencode }}"
     hx-trigger="load, reload_videos"
     hx-indicator="#spinner"
     hx-swap="innerHTML"

@@ -8,11 +8,14 @@ from django.views.decorators.csrf import csrf_exempt
 
 from django.utils.decorators import method_decorator
 
+from common.utils import require_token
+
 
 @method_decorator(csrf_exempt, name="dispatch")
 class YoutubeSavePlaylist(View):
     http_method_names = ["post"]
 
+    @require_token("extension")
     def post(self, request):
 
         try:
@@ -43,4 +46,4 @@ class YoutubeSavePlaylist(View):
             obj.yp_videos = videos
             obj.save()
 
-        return HttpResponse("Playlist saved")
+        return HttpResponse("Save & Reload")

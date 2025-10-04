@@ -1,7 +1,8 @@
 from django.views.generic import TemplateView
 
+from common.models import AppToken
 from discord.views.get_youtube_tracks import get_videos, get_youtube_info
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 
 from django.template.loader import render_to_string
 from django.views.decorators.clickjacking import xframe_options_exempt
@@ -21,7 +22,6 @@ class YoutubePlaylistMissingVideos(TemplateView):
         return context
 
     def render_missing_videos(self, playlist_url):
-        # fixme
         youtube_data = get_youtube_info(
             "https://www.youtube.com/playlist?list=" + playlist_url
         )
@@ -48,4 +48,19 @@ class YoutubePlaylistMissingVideos(TemplateView):
             html = self.render_missing_videos(kwargs.get("url"))
             return HttpResponse(html)
 
-        return super().get(request, *args, **kwargs)
+        if not kwargs.get("token"):
+            return HttpResponseBadRequest("Token not provided")
+
+        try:
+            AppToken.objects.get(
+                at_app_token=kwargs.get("token"),
+                at_is_active=True,
+                at_app_name="extension",
+            )
+        except AppToken.DoesNotExist:
+            return HttpResponseForbidden("Invalid or inactive token")
+
+        context = self.get_context_data(**kwargs)
+        context["token"] = kwargs.get("token")
+
+        return self.render_to_response(context)
