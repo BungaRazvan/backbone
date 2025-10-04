@@ -15,14 +15,11 @@ Including another URLconf
 """
 
 from django.urls import path, include
-
-
-def trigger_error(request):
-    division_by_zero = 1 / 0
+from django.contrib import admin
 
 
 urlpatterns = [
     path("discord/", include("discord.urls")),
     path("extension/", include("extension.urls")),
-    path("sentry-debug/", trigger_error),
+    path("admin/", admin.site.urls),
 ]
