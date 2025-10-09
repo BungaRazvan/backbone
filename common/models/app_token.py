@@ -9,7 +9,7 @@ class AppToken(models.Model):
         app_label = "common"
 
     at_app_name = models.CharField(null=False, blank=False, max_length=255, unique=True)
-    at_app_token = models.CharField(null=False, blank=False, max_length=64)
+    at_app_token = models.CharField(null=False, blank=True, max_length=64)
     at_is_active = models.BooleanField(default=True)
     at_created_at = models.DateTimeField(auto_now_add=True)
 

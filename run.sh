@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-docker rm backbone -f
+docker rm backbone -f || true
 
 docker load -i backbone.tar
 
