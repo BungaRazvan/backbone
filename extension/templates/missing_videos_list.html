@@ -9,3 +9,13 @@
   <li class="text-green-500">No missing videos!</li>
   {% endfor %}
 </ul>
+
+{% if extra_videos %}
+<h1 class="text-2xl font-bold mb-4">Videos not saved</h1>
+{% endif %}
+
+<ul class="list-disc text-white pl-5 space-y-1">
+  {% for video in extra_videos %}
+  <li>{{ video.title }}</li>
+  {% endfor %}
+</ul>

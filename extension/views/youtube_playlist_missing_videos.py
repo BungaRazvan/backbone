@@ -38,9 +38,11 @@ class YoutubePlaylistMissingVideos(TemplateView):
         youtube_titles = [v.get("title") for v in youtube_videos]
 
         missing_videos = [{"title": v} for v in saved_titles if v not in youtube_titles]
+        extra_videos = [{"title": v} for v in youtube_titles if v not in saved_titles]
 
         return render_to_string(
-            "missing_videos_list.html", {"missing_videos": missing_videos}
+            "missing_videos_list.html",
+            {"missing_videos": missing_videos, "extra_videos": extra_videos},
         )
 
     def get(self, request, *args, **kwargs):
