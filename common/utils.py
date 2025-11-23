@@ -3,6 +3,22 @@ from django.http import HttpResponseForbidden
 from common.models import AppToken
 
 
+def get_api_key(request):
+
+    header_keys = ["X-API-KEY", "x-api-key", "HTTP_X_API_KEY"]
+
+    for key in header_keys:
+        value = request.headers.get(key)
+        if value:
+            return value
+
+        value = request.META.get(key)
+        if value:
+            return value
+
+    return None
+
+
 def require_token(app_name=None):
     """
     Decorator to require a valid API token.
@@ -18,7 +34,7 @@ def require_token(app_name=None):
             else:
                 request = args[0]
 
-            key = request.headers.get("X-API-KEY") or request.META.get("HTTP_X_API_KEY")
+            key = get_api_key(request)
 
             if not key:
                 return HttpResponseForbidden("Missing API token")

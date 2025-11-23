@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class QueueIntervals(models.Model):
+class QueueInterval(models.Model):
     class Meta:
         db_table = "queue_intervals"
         app_label = "discord"
