@@ -9,6 +9,8 @@ from discord.models import YoutubePlaylist, YoutubeSong
 
 from discord.views.get_youtube_tracks import get_videos, get_youtube_info
 
+from distutils.util import strtobool
+
 
 class YoutubePlaylistView(APIView):
     @require_token("discord")
@@ -18,6 +20,7 @@ class YoutubePlaylistView(APIView):
         user_id = args.get("user_id")
         guild_id = args.get("guild_id")
         playlist_id = args.get("playlist_id")
+        play_mode = strtobool(args.get("play_mode", "false"))
 
         if not user_id or not guild_id:
             return HttpResponseBadRequest("Missing arguments")
@@ -40,7 +43,7 @@ class YoutubePlaylistView(APIView):
         data = []
 
         for playlist in playlists:
-            if playlist_id:
+            if not play_mode:
                 songs = [song.ys_url for song in playlist.songs.all()]
             else:
                 songs = []
