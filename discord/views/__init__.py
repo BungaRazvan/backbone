@@ -1,1 +1,3 @@
 from .get_youtube_tracks import GetYoutubeTracksView
+from .youtube_playlist_songs import YoutubePlaylistSongsView
+from .youtube_playlists import YoutubePlaylistView
