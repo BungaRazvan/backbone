@@ -4,7 +4,7 @@ USER root
 RUN mkdir -p /app && chmod -R 755 /app
 
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONNUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1
 
 RUN python -m pip install --upgrade pip setuptools wheel
 
