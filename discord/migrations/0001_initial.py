@@ -8,35 +8,44 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='QueueIntervals',
+            name="QueueIntervals",
             fields=[
-                ('qi_id', models.AutoField(primary_key=True, serialize=False)),
-                ('qi_description', models.CharField(blank=True, max_length=255, null=True)),
-                ('qi_user_id', models.CharField(max_length=255)),
-                ('qi_name', models.CharField(max_length=255)),
-                ('qi_created_at', models.DateTimeField()),
-                ('qi_at', models.CharField(max_length=16)),
-                ('qi_channel', models.CharField(blank=True, max_length=255, null=True)),
+                ("qi_id", models.AutoField(primary_key=True, serialize=False)),
+                (
+                    "qi_description",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                ("qi_user_id", models.CharField(max_length=255)),
+                ("qi_name", models.CharField(max_length=255)),
+                ("qi_created_at", models.DateTimeField()),
+                ("qi_at", models.CharField(max_length=16)),
+                ("qi_channel", models.CharField(blank=True, max_length=255, null=True)),
             ],
             options={
-                'db_table': 'queue_intervals',
+                "db_table": "queue_intervals",
             },
         ),
         migrations.CreateModel(
-            name='QueuePictures',
+            name="QueuePictures",
             fields=[
-                ('qp_id', models.AutoField(primary_key=True, serialize=False)),
-                ('qp_image', models.CharField(max_length=255)),
-                ('qp_created_at', models.DateTimeField()),
-                ('qp_interval_id', models.ForeignKey(db_column='qp_interval_id', on_delete=django.db.models.deletion.DO_NOTHING, to='discord.queueintervals')),
+                ("qp_id", models.AutoField(primary_key=True, serialize=False)),
+                ("qp_image", models.CharField(max_length=255)),
+                ("qp_created_at", models.DateTimeField()),
+                (
+                    "qp_interval_id",
+                    models.ForeignKey(
+                        db_column="qp_interval_id",
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="discord.queueintervals",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'queue_pictures',
+                "db_table": "queue_pictures",
             },
         ),
     ]

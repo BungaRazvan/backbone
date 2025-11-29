@@ -2,5 +2,5 @@ from django.apps import AppConfig
 
 
 class ExtensionConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'extension'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "extension"
