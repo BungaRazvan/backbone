@@ -45,7 +45,7 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
 
 INSTALLED_APPS = [
-    "discord",
+    "discord_core",
     "extension",
     "common",
     #

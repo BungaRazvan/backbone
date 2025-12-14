@@ -1,6 +1,6 @@
 from django.views import View
 from django.http import HttpResponseBadRequest, JsonResponse
-from discord.models import QueuePictures
+from discord_core.models import QueuePictures
 
 
 class GetQueueImages(View):

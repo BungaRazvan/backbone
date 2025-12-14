@@ -4,8 +4,8 @@ import logging
 from django.core.management.base import BaseCommand
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from discord.models import QueueInterval
-from discord.tasks import send_image_to_discord
+from discord_core.models import QueueInterval
+from discord_core.tasks import send_image_to_discord
 
 logger = logging.getLogger(__name__)
 

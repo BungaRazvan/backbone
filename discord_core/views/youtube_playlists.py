@@ -5,9 +5,9 @@ from rest_framework.views import APIView
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 
 from common.utils import require_token
-from discord.models import YoutubePlaylist, YoutubeSong
+from discord_core.models import YoutubePlaylist, YoutubeSong
 
-from discord.views.get_youtube_tracks import get_videos, get_youtube_info
+from discord_core.views.get_youtube_tracks import get_videos, get_youtube_info
 
 from distutils.util import strtobool
 
