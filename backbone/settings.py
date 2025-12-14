@@ -57,6 +57,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     #
     "rest_framework",
+    "django_celery_beat",
+    "django_celery_results",
 ]
 
 MIDDLEWARE = [
@@ -163,9 +165,9 @@ SESSION_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS")
 
 
-REDIS_HOST = os.getenv("REDIS_HOST", "redis")
-REDIS_PORT = os.getenv("REDIS_PORT", "6379")
-REDIS_DB = os.getenv("REDIS_DB", "0")
+REDIS_HOST = env.str("REDIS_HOST", "localhost")
+REDIS_PORT = env.str("REDIS_PORT", "6379")
+REDIS_DB = env.str("REDIS_DB", "0")
 
 REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
@@ -183,3 +185,6 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}
 
 CELERY_TIMEZONE = TIME_ZONE
+
+
+DISCORD_BOT_TOKEN = env.str("DISCORD_BOT_TOKEN", None)

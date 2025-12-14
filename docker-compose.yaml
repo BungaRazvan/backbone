@@ -18,13 +18,12 @@ services:
     depends_on:
       - redis
 
-  scheduler:
+  beat:
     build: .
-    command: python manage.py runapscheduler
+    command: celery -A backbone beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     depends_on:
       - redis
       - web
-
   redis:
     image: redis:7-alpine
     ports:

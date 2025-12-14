@@ -1,1 +1,1 @@
-from .hello_world import hello
+from .sync_picture_queue import sync_queueinterval_to_beat

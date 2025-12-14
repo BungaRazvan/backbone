@@ -12,3 +12,8 @@ class YoutubePlaylistAdmin(admin.ModelAdmin):
 @admin.register(YoutubeSong)
 class YoutubeSongAdmin(admin.ModelAdmin):
     pass
+
+
+@admin.register(QueueInterval)
+class QueueIntervalPictures(admin.ModelAdmin):
+    pass
