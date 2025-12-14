@@ -19,7 +19,7 @@ from django.contrib import admin
 
 
 urlpatterns = [
-    path("discord/", include("discord.urls")),
+    path("discord/", include("discord_core.urls")),
     path("extension/", include("extension.urls")),
     path("admin/", admin.site.urls),
 ]

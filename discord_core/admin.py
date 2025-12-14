@@ -1,7 +1,12 @@
 from django.contrib import admin
 
 
-from discord.models import QueueInterval, QueuePicture, YoutubePlaylist, YoutubeSong
+from discord_core.models import (
+    QueueInterval,
+    QueuePicture,
+    YoutubePlaylist,
+    YoutubeSong,
+)
 
 
 @admin.register(YoutubePlaylist)

@@ -1,6 +1,7 @@
 from django.apps import AppConfig
 
 
-class DiscordConfig(AppConfig):
+class DiscordCoreConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "discord"
+    name = "discord_core"
+    label = "discord"

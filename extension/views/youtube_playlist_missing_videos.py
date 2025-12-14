@@ -1,7 +1,7 @@
 from django.views.generic import TemplateView
 
 from common.models import AppToken
-from discord.views.get_youtube_tracks import get_videos, get_youtube_info
+from discord_core.views.get_youtube_tracks import get_videos, get_youtube_info
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 
 from django.template.loader import render_to_string

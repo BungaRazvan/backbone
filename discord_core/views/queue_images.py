@@ -2,7 +2,7 @@ import json
 
 from django.views import View
 
-from discord.models import QueuePictures, QueueIntervals
+from discord_core.models import QueuePictures, QueueIntervals
 from django.http import JsonResponse
 
 
