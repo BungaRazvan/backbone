@@ -1,3 +1,5 @@
 from .get_youtube_tracks import GetYoutubeTracksView
 from .youtube_playlist_songs import YoutubePlaylistSongsView
 from .youtube_playlists import YoutubePlaylistView
+from .minecraft_stats import MinecraftStatsView
+from .minecraft_players import MinecraftPlayersView
