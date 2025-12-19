@@ -23,7 +23,7 @@ class MinecraftPlayersView(APIView):
             return HttpResponseBadRequest("Missing identifier")
 
         uuids = list(
-            MinecraftPlayer.objects.all(mp_mcs_server_id=mc_server_id).values_list(
+            MinecraftPlayer.objects.filter(mp_mcs_server_id=mc_server_id).values_list(
                 "mp_uuid", flat=True
             )
         )
