@@ -22,11 +22,13 @@ class MinecraftPlayersView(APIView):
         if not mc_server_id:
             return HttpResponseBadRequest("Missing identifier")
 
-        uuids = list(
-            MinecraftPlayer.objects.filter(mp_mcs_server_id=mc_server_id).values_list(
-                "mp_uuid", flat=True
-            )
+        existing_uuids = set(
+            str(u)
+            for u in MinecraftPlayer.objects.filter(
+                mp_mcs_server_id=mc_server_id
+            ).values_list("mp_uuid", flat=True)
         )
+        print(existing_uuids)
 
         to_create = []
         for player in mc_players:
@@ -36,11 +38,11 @@ class MinecraftPlayersView(APIView):
             if not uuid or not name:
                 continue
 
-            if uuid not in uuids:
+            if uuid not in existing_uuids:
                 to_create.append(
                     MinecraftPlayer(
                         mp_uuid=uuid,
-                        mp_name=name,
+                        mp_mc_name=name,
                         mp_mcs_server_id=mc_server_id,
                     )
                 )

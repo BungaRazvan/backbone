@@ -19,3 +19,6 @@ class MinecraftPlayer(models.Model):
         on_delete=models.CASCADE,
         db_column="mp_mcs_server_id",
     )
+
+    def __str__(self):
+        return f"MinecraftPlayer(mp_id={self.mp_id}, mp_mc_name={self.mp_mc_name})"

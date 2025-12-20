@@ -34,12 +34,12 @@ class MinecraftStatsView(APIView):
         _, created = MinecraftStat.objects.update_or_create(
             mst_player=player,
             defaults={
-                "mst_stats": stats,
+                "mst_data": stats,
                 "mst_player": player,
             },
         )
 
-        return HttpResponse(status_code=201 if created else 200)
+        return HttpResponse(status=201 if created else 200)
 
     @require_token("discord")
     def get(self, request):
