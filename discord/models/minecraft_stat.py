@@ -8,7 +8,7 @@ class MinecraftStat(models.Model):
 
     mst_id = models.AutoField(primary_key=True)
     mst_data = models.JSONField()
-    mst_timestamp = models.DateTimeField(auto_now_add=True)
+    mst_timestamp = models.DateTimeField(auto_now=True)
     mst_player = models.OneToOneField(
         "discord.MinecraftPlayer",
         on_delete=models.CASCADE,

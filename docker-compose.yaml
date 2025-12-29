@@ -1,0 +1,60 @@
+version: "3.9"
+
+services:
+  web:
+    image: backbone:latest
+    container_name: backbone_web
+    env_file:
+      - .env.prod
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./databases:/app/databases
+      - ./staticfiles:/app/staticfiles
+    security_opt:
+      - seccomp=unconfined
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        python manage.py migrate --database=discord_db &&
+        python manage.py migrate --database=extension_db &&
+        python manage.py migrate --database=mytools_db &&
+        python manage.py collectstatic --noinput &&
+        gunicorn backbone.wsgi:application --bind 0.0.0.0:8000
+      "
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  worker:
+    image: backbone:latest
+    container_name: backbone_worker
+    env_file:
+      - .env.prod
+    command: celery -A backbone worker -l info --pool=solo
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  beat:
+    image: backbone:latest
+    container_name: backbone_beat
+    env_file:
+      - .env.prod
+    command: celery -A backbone beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    depends_on:
+      - redis
+      - web
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: backbone_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  redis_data:

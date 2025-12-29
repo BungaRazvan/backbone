@@ -21,5 +21,6 @@ from django.contrib import admin
 urlpatterns = [
     path("discord/", include("discord.urls")),
     path("extension/", include("extension.urls")),
+    path("mytools/", include("mytools.urls")),
     path("admin/", admin.site.urls),
 ]
