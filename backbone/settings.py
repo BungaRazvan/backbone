@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "discord",
     "extension",
     "common",
+    "mytools",
     #
     "django.contrib.admin",
     "django.contrib.auth",
@@ -57,6 +58,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     #
     "rest_framework",
+    "django_celery_beat",
+    "django_celery_results",
 ]
 
 MIDDLEWARE = [
@@ -109,12 +112,17 @@ DATABASES = {
         "NAME": DB_FOLDER / "extension_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
     },
+    "mytools_db": {
+        "NAME": DB_FOLDER / "mytools_db.sqlite3",
+        "ENGINE": "django.db.backends.sqlite3",
+    },
 }
 
 DATABASE_ROUTERS = [
     "routers.DefaultRouter",
     "routers.DiscordRouter",
     "routers.ExtensionRouter",
+    "routers.MyToolsRouter",
 ]
 
 
@@ -161,3 +169,25 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
 SESSION_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS")
+
+
+REDIS_HOST = env.str("REDIS_HOST", "localhost")
+REDIS_PORT = env.str("REDIS_PORT", "6379")
+REDIS_DB = env.str("REDIS_DB", "0")
+
+REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+
+CELERY_BROKER_URL = REDIS_URL
+
+CELERY_RESULT_BACKEND = "django-db"
+
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+
+CELERY_TASK_ACKS_LATE = True
+
+
+CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}
+
+CELERY_TIMEZONE = TIME_ZONE

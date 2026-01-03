@@ -1,6 +1,10 @@
 #!/bin/bash
-set -e  
+set -e
 
-docker buildx build --platform linux/arm/v7 -t backbone:latest .
+docker buildx build \
+  --platform linux/arm/v7 \
+  -t backbone:latest \
+  --load \
+  .
 
-docker save -o backbone.tar backbone:latest
+docker save backbone:latest -o backbone.tar

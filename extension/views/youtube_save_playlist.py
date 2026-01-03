@@ -1,7 +1,8 @@
+import json
+
 from django.views import View
 from django.http import HttpResponseBadRequest, HttpResponse
 
-import json
 from discord.views.get_youtube_tracks import get_videos, get_youtube_info
 from extension.models import YoutubePlaylist
 from django.views.decorators.csrf import csrf_exempt
