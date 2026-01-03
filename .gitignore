@@ -2,6 +2,7 @@
 /.idea
 __pycache__
 .env
+.env.*
 *.sqlite3
 *.tar
 /staticfiles

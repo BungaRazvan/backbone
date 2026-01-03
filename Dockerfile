@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.9-slim-buster
 
 USER root
 RUN mkdir -p /app && chmod -R 755 /app
