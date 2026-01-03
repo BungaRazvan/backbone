@@ -29,9 +29,11 @@ services:
   worker:
     image: backbone:latest
     container_name: backbone_worker
+    volumes:
+      - ./databases:/app/databases
     env_file:
       - .env.prod
-    command: celery -A backbone worker -l info --pool=solo
+    command: celery -A backbone worker -l info -c 1
     depends_on:
       - redis
     restart: unless-stopped
@@ -41,6 +43,8 @@ services:
     container_name: backbone_beat
     env_file:
       - .env.prod
+    volumes:
+      - ./databases:/app/databases
     command: celery -A backbone beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     depends_on:
       - redis
@@ -48,13 +52,15 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: arm32v7/redis:6.0.6
     container_name: backbone_redis
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - backbone_redis_data:/data
+    command: redis-server
     restart: unless-stopped
 
 volumes:
-  redis_data:
+  backbone_redis_data:
+    external: true

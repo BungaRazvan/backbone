@@ -11,7 +11,7 @@ class Etf(models.Model):
     ef_name = models.CharField(blank=False, null=False, max_length=255)
 
     ef_isin = models.CharField(max_length=255)
-    ef_symbol = models.CharField(max_length=255)
+    ef_symbol = models.CharField(max_length=255, blank=True, null=True)
     ef_distribution = models.CharField(
         max_length=255,
         choices=[("monthly", "Monthly"), ("quarterly", "Quarterly")],
