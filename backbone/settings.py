@@ -103,18 +103,30 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": DB_FOLDER / "db.sqlite3",
+        "TEST": {
+            "NAME": DB_FOLDER / "test" / "db.sqlite3",
+        },
     },
     "discord_db": {
         "NAME": DB_FOLDER / "discord_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
+        "TEST": {
+            "NAME": DB_FOLDER / "test" / "discord_db.sqlite3",
+        },
     },
     "extension_db": {
         "NAME": DB_FOLDER / "extension_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
+        "TEST": {
+            "NAME": DB_FOLDER / "test" / "extension_db.sqlite3",
+        },
     },
     "mytools_db": {
         "NAME": DB_FOLDER / "mytools_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
+        "TEST": {
+            "NAME": DB_FOLDER / "test" / "mytools_db.sqlite3",
+        },
     },
 }
 
@@ -186,7 +198,7 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 
 CELERY_TASK_ACKS_LATE = True
-
+CELERY_RESULT_EXTENDED = True
 
 CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}
 
