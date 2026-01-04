@@ -7,3 +7,4 @@ __pycache__
 *.tar
 /staticfiles
 celerybeat-schedule
+.pytest_cache

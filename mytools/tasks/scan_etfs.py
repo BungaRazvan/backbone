@@ -5,7 +5,7 @@ import requests
 from datetime import timezone, datetime
 
 from mytools.models import Etf
-from .update_etf_dividend import update_etf_dividend
+from .update_etf_dividend import update_dividend
 
 
 def get_next_dividend(etf):
@@ -28,11 +28,11 @@ def scan_etfs():
 
         # No future event → must refresh
         if not next_event:
-            update_etf_dividend.delay(etf.ef_id)
+            update_dividend.delay(etf.ef_id)
             continue
 
         # Ex-date is close → refresh more often
         days_to_ex = (next_event.ee_ex_date - today).days
 
         if days_to_ex < 30:
-            update_etf_dividend.delay(etf.ef_id)
+            update_dividend.delay(etf.ef_id)

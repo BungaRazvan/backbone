@@ -7,3 +7,4 @@ __pycache__/
 /databases
 /venv
 celerybeat-schedule
+.pytest_cache
