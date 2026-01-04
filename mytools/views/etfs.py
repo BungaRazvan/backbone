@@ -32,11 +32,30 @@ class EventSerializer(serializers.ModelSerializer):
 
 class EtfSerializer(serializers.ModelSerializer):
     shares = ShareSerializer(many=True, read_only=True)
-    events = EventSerializer(many=True, read_only=True)
+    future_event = serializers.SerializerMethodField()
+    recent_event = serializers.SerializerMethodField()
 
     class Meta:
         model = Etf
         fields = "__all__"
+
+    def get_future_event(self, obj):
+
+        events = getattr(obj, "future_events", [])
+
+        if events:
+            return EventSerializer(events[0]).data
+
+        return None
+
+    def get_recent_event(self, obj):
+
+        events = getattr(obj, "recent_events", [])
+
+        if events:
+            return EventSerializer(events[0]).data
+
+        return None
 
 
 class EfsListView(View):
@@ -49,13 +68,23 @@ class EfsListView(View):
 
         future_events = Prefetch(
             "events",
-            queryset=EtfEvent.objects.filter(ee_ex_date__gte=today).order_by(
+            queryset=EtfEvent.objects.filter(ee_ex_date__gt=today).order_by(
                 "ee_ex_date"
             ),
+            to_attr="future_events",
         )
+
+        recent_events = Prefetch(
+            "events",
+            queryset=EtfEvent.objects.filter(ee_ex_date__lte=today).order_by(
+                "-ee_ex_date"
+            ),
+            to_attr="recent_events",
+        )
+
         etfs = (
             Etf.objects.all()
-            .prefetch_related(future_events, "shares")
+            .prefetch_related(future_events, recent_events, "shares")
             .annotate(
                 next_dividend_date=Min(
                     "events__ee_ex_date", filter=Q(events__ee_ex_date__gte=today)
