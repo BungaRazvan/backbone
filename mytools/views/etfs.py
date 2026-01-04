@@ -82,14 +82,8 @@ class EfsListView(View):
             to_attr="recent_events",
         )
 
-        etfs = (
-            Etf.objects.all()
-            .prefetch_related(future_events, recent_events, "shares")
-            .annotate(
-                next_dividend_date=Min(
-                    "events__ee_ex_date", filter=Q(events__ee_ex_date__gte=today)
-                )
-            )
+        etfs = Etf.objects.all().prefetch_related(
+            future_events, recent_events, "shares"
         )
         data = EtfSerializer(etfs, many=True).data
 

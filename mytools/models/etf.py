@@ -10,13 +10,18 @@ class Etf(models.Model):
     ef_id = models.AutoField(primary_key=True)
     ef_name = models.CharField(blank=False, null=False, max_length=255)
 
-    ef_isin = models.CharField(max_length=255)
+    ef_isin = models.CharField(max_length=255, blank=True, null=True)
     ef_symbol = models.CharField(max_length=255, blank=True, null=True)
     ef_distribution = models.CharField(
         max_length=255,
-        choices=[("monthly", "Monthly"), ("quarterly", "Quarterly")],
-        blank=False,
-        null=False,
+        choices=[
+            ("monthly", "Monthly"),
+            ("quarterly", "Quarterly"),
+            ("semi-annually", "Semi-Annually"),
+            ("annually", "Annually"),
+        ],
+        blank=True,
+        null=True,
     )
     ef_pay_lag_days = models.IntegerField(default=0, blank=False, null=False)
 
