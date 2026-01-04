@@ -19,16 +19,9 @@ class Etf(models.Model):
         null=False,
     )
     ef_pay_lag_days = models.IntegerField(default=0, blank=False, null=False)
-    ef_currency = models.CharField(
-        max_length=255,
-        choices=[("pound", "Pound"), ("dollar", "Dollar")],
-        blank=False,
-        null=False,
-    )
 
     def to_upper_unit(self, amount: int):
-        if self.ef_currency in ["pound", "dollar"]:
-
+        if self.ef_symbol.endswith(".L") and amount > 1:
             return Decimal(amount) / Decimal(100)
 
         return Decimal(amount)
