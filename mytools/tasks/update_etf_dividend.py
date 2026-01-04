@@ -81,11 +81,19 @@ def update_dividend(etf_id: int) -> None:
     if not future:
         next_event = EtfEvent.objects.filter(ee_etf=etf, ee_ex_date__gt=ex_date).first()
 
-        if etf.ef_distribution == "monthly":
-            next_ex_date = ex_date + relativedelta(months=1)
+        delta_map = {
+            "monthly": relativedelta(months=1),
+            "quarterly": relativedelta(months=3),
+            "semi-annually": relativedelta(months=6),
+            "annually": relativedelta(years=1),
+        }
 
-        elif etf.ef_distribution == "quarterly":
-            next_ex_date = ex_date + relativedelta(months=3)
+        delta = delta_map.get(etf.ef_distribution)
+
+        if delta:
+            next_ex_date = ex_date + delta
+        else:
+            return
 
         next_payment = next_ex_date + relativedelta(days=etf.ef_pay_lag_days)
 
