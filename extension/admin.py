@@ -16,7 +16,6 @@ class YoutubePlaylistAdmin(admin.ModelAdmin):
         if not obj.yp_videos:
             return "No videos available."
 
-        headers = ["Title", "URL"]
         rows = ""
         for v in obj.yp_videos:
             rows += f"<tr><td>{v.get('title','')}</td><td><a href='{v.get('url','#')}' target='_blank'>Link</a></td></tr>"

@@ -1,9 +1,8 @@
 from django.contrib import admin
+from django.utils.safestring import mark_safe
 
 
 from discord.models import (
-    QueueInterval,
-    QueuePicture,
     YoutubePlaylist,
     YoutubeSong,
     MinecraftServer,
@@ -14,7 +13,16 @@ from discord.models import (
 
 @admin.register(YoutubePlaylist)
 class YoutubePlaylistAdmin(admin.ModelAdmin):
-    pass
+    fields = ("yp_name", "videos_table")
+    readonly_fields = ("videos_table",)
+
+    def videos_table(self, obj):
+
+        rows = ""
+        for song in obj.songs.all():
+            rows += f"<tr><td>{song.ys_url}</td><tr>"
+        html = f"<table style='border-collapse:collapse; width:100%;' border='1'><tr>{''.join(rows)}</table>"
+        return mark_safe(html)
 
 
 @admin.register(YoutubeSong)
