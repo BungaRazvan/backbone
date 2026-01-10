@@ -55,10 +55,15 @@ def get_videos(data):
                 }
             )
     else:
-        # Single video
+        # Single video posible from a playlist like ?index=1
+        title = data.get("title")
+        if not title:
+            video_info = get_youtube_info(data.get("url"))
+            title = video_info.get("title")
+
         tracks.append(
             {
-                "title": data.get("title"),
+                "title": title,
                 "url": data.get("url"),
             }
         )
