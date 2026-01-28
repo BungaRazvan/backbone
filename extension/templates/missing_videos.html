@@ -20,6 +20,14 @@
     Save & Reload
   </button>
 
+  <button
+    class="px-4 py-2 bg-blue-600 text-white rounded mb-2"
+    hx-get="/extension/scan-youtube-playlist/{{ token }}/{{ playlist_url }}"
+    hx-headers='{"X-API-KEY": "{{ token }}"}'
+  >
+    Full Scan
+  </button>
+
   <!-- Spinner -->
   <div id="spinner" class="hidden justify-center my-4">
     <div
