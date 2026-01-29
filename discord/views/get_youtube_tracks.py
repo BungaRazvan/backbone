@@ -36,6 +36,9 @@ def get_youtube_info(url, title=None):
         if title:
             data = ydl.extract_info(f"ytsearch:{title}", download=False)
         else:
+            if "RD" in url:
+                ydl_opts["noplaylist"] = True
+
             data = ydl.extract_info(url, download=False)
 
     return data
