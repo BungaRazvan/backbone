@@ -21,12 +21,6 @@ class EtfShare(models.Model):
     )
     efs_purchase_date = models.DateField(blank=False, null=False)
     efs_created_on = models.DateField(auto_now_add=True)
-    etf_share = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        choices=(("Divident", "divident"), ("Salary", "salary")),
-    )
 
     def __str__(self):
         return f"EtfShare(efs_id={self.efs_id})"
