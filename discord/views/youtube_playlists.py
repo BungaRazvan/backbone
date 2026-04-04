@@ -49,7 +49,7 @@ class YoutubePlaylistView(APIView):
                 songs = []
 
                 for song in playlist.songs.all():
-                    yt_info = get_youtube_info(song.ys_url)
+                    yt_info = get_youtube_info(song.ys_url, allow_rd_playlist=True)
                     vidoes = get_videos(yt_info)
                     songs.extend(vidoes)
 
