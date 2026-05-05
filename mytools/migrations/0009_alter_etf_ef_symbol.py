@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mytools', '0008_rename_ee_created_etfevent_ee_created_on_and_more'),
+        ("mytools", "0008_rename_ee_created_etfevent_ee_created_on_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='etf',
-            name='ef_symbol',
+            model_name="etf",
+            name="ef_symbol",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
     ]
