@@ -2,7 +2,7 @@ from datetime import timezone, datetime
 
 from django.views import View
 from django.http.response import JsonResponse
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Sum
 
 from common.utils import require_token
 from mytools.models import Etf, EtfShare, EtfEvent
@@ -12,7 +12,13 @@ from rest_framework import serializers
 class ShareSerializer(serializers.ModelSerializer):
     class Meta:
         model = EtfShare
-        fields = "__all__"
+        exclude = ['efs_ef', 'efs_created_on']
+
+
+class DividentSerialiser(serializers.ModelSerializer):
+    class Meta:
+        model = EtfEvent
+        fields = ["ee_pay_per_share", "ee_payment_date", "ee_eligible_shares_amount"]
 
 
 class EventSerializer(serializers.ModelSerializer):
@@ -20,7 +26,6 @@ class EventSerializer(serializers.ModelSerializer):
         model = EtfEvent
         fields = [
             "ee_id",
-            "ee_etf",
             "ee_ex_date",
             "ee_payment_date",
             "ee_ex_estimated",
@@ -32,12 +37,16 @@ class EventSerializer(serializers.ModelSerializer):
 
 class EtfSerializer(serializers.ModelSerializer):
     shares = ShareSerializer(many=True, read_only=True)
+    dividents = DividentSerialiser(many=True, read_only=True)
     future_event = serializers.SerializerMethodField()
     recent_event = serializers.SerializerMethodField()
+    total_spent = serializers.SerializerMethodField()
+    total_shares = serializers.SerializerMethodField()
+    total_dividents = serializers.SerializerMethodField()
 
     class Meta:
         model = Etf
-        fields = "__all__"
+        exclude = ["ef_isin", "ef_pay_lag_days", "ef_symbol", "ef_distribution"]
 
     def get_future_event(self, obj):
 
@@ -56,6 +65,23 @@ class EtfSerializer(serializers.ModelSerializer):
             return EventSerializer(events[0]).data
 
         return None
+
+    def get_total_spent(self, obj):
+
+        return getattr(obj, "total_spent", None)
+
+    def get_total_shares(self, obj):
+
+        return getattr(obj, "total_shares", None)
+
+    def get_total_dividents(self, obj):
+        div_list = getattr(obj, "dividents", [])
+
+        return sum(
+            event.ee_pay_per_share * event.ee_eligible_shares_amount
+            for event in div_list
+            if event.ee_pay_per_share
+        )
 
 
 class EfsListView(View):
@@ -82,8 +108,27 @@ class EfsListView(View):
             to_attr="recent_events",
         )
 
-        etfs = Etf.objects.all().prefetch_related(
-            future_events, recent_events, "shares"
+        dividents = Prefetch(
+            "events",
+            queryset=EtfEvent.objects.filter(
+                ee_pay_per_share__isnull=False,
+                ee_payment_date__lte=today,
+            ).order_by('-ee_payment_date'),
+            to_attr="dividents",
+        )
+
+        etfs = (
+            Etf.objects.all()
+            .prefetch_related(
+                future_events,
+                recent_events,
+                dividents,
+                "shares",
+            )
+            .annotate(
+                total_spent=Sum("shares__efs_total_price"),
+                total_shares=Sum("shares__efs_amount"),
+            )
         )
         data = EtfSerializer(etfs, many=True).data
 
