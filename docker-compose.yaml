@@ -20,8 +20,7 @@ services:
         python manage.py migrate --database=extension_db &&
         python manage.py migrate --database=mytools_db &&
         python manage.py collectstatic --noinput &&
-        gunicorn backbone.wsgi:application --bind 127.0.0.1:8000
-      "
+        gunicorn backbone.wsgi:application --bind 0.0.0.0:8000"
     depends_on:
       - redis
     restart: unless-stopped
