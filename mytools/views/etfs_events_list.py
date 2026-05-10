@@ -7,15 +7,16 @@ from common.utils import require_token
 from mytools.models import Etf, EtfShare, EtfEvent
 from rest_framework import serializers
 
+
 class EtfSerializer(serializers.ModelSerializer):
     class Meta:
         model = Etf
-        fields = [
-            'ef_name'
-        ]
+        fields = ["ef_name"]
+
 
 class EventSerializer(serializers.ModelSerializer):
     ee_etf = EtfSerializer(required=False)
+
     class Meta:
         model = EtfEvent
         fields = [
@@ -36,10 +37,12 @@ class EfsEventsListView(View):
 
         today = datetime.now(timezone.utc).now().date()
 
-        events = EtfEvent.objects.filter(
-            Q(ee_ex_date__year=today.year) | Q(ee_payment_date__year=today.year)
-        ).select_related("ee_etf").order_by(
-            'ee_ex_date', 'ee_payment_date'
+        events = (
+            EtfEvent.objects.filter(
+                Q(ee_ex_date__year=today.year) | Q(ee_payment_date__year=today.year)
+            )
+            .select_related("ee_etf")
+            .order_by("ee_ex_date", "ee_payment_date")
         )
 
         data = EventSerializer(events, many=True).data

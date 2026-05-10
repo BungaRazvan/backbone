@@ -7,7 +7,7 @@ services:
     env_file:
       - .env.prod
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./databases:/app/databases
       - ./staticfiles:/app/staticfiles
@@ -20,7 +20,7 @@ services:
         python manage.py migrate --database=extension_db &&
         python manage.py migrate --database=mytools_db &&
         python manage.py collectstatic --noinput &&
-        gunicorn backbone.wsgi:application --bind 0.0.0.0:8000
+        gunicorn backbone.wsgi:application --bind 127.0.0.1:8000
       "
     depends_on:
       - redis
@@ -55,7 +55,7 @@ services:
     image: arm32v7/redis:6.0.6
     container_name: backbone_redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - backbone_redis_data:/data
     command: redis-server
