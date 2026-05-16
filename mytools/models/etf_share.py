@@ -19,6 +19,9 @@ class EtfShare(models.Model):
     efs_total_price = models.DecimalField(
         max_digits=20, decimal_places=8, blank=False, null=False
     )
+    ets_funds = models.CharField(max_length=255, blank=True, null=True, choices=((
+        'salary', 'Salary'
+    ), ('dividents', 'Dividents')))
     efs_purchase_date = models.DateField(blank=False, null=False)
     efs_created_on = models.DateField(auto_now_add=True)
 

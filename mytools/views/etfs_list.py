@@ -128,8 +128,7 @@ class EfsListView(View):
             .annotate(
                 total_spent=Sum("shares__efs_total_price"),
                 total_shares=Sum("shares__efs_amount"),
-            )
-        )
+        ))
         data = EtfSerializer(etfs, many=True).data
 
         return JsonResponse(data, safe=False)
