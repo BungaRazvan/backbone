@@ -28,7 +28,6 @@ class MinecraftPlayersView(APIView):
                 mp_mcs_server_id=mc_server_id
             ).values_list("mp_uuid", flat=True)
         )
-        print(existing_uuids)
 
         to_create = []
         for player in mc_players:

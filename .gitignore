@@ -1,5 +1,6 @@
 /venv
 /.idea
+/databases
 __pycache__
 .env
 .env.*
@@ -8,3 +9,4 @@ __pycache__
 /staticfiles
 celerybeat-schedule
 .pytest_cache
+

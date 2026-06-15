@@ -1,21 +1,25 @@
-{% if missin_videos %}
-<h1 class="text-2xl font-bold mb-4">Missing Videos</h1>
+{% if error %}
+<p class="text-amber-200">{{ error }}</p>
+{% endif %} {% if missing_videos %}
+<section class="mb-6">
+  <h2 class="text-xl font-semibold text-white mb-2">Missing Videos</h2>
+  <ul class="list-disc text-white pl-5 space-y-1">
+    {% for video in missing_videos %}
+    <li>{{ video.title }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% else %}
+<p class="text-emerald-300">No missing videos found.</p>
+{% endif %} {% if extra_videos %}
+<section>
+  <h2 class="text-xl font-semibold text-white mb-2">Videos not saved</h2>
+  <ul class="list-disc text-white pl-5 space-y-1">
+    {% for video in extra_videos %}
+    <li>{{ video.title }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% else %}
+<p class="text-emerald-300">No extra videos found.</p>
 {% endif %}
-
-<ul class="list-disc text-white pl-5 space-y-1">
-  {% for video in missing_videos %}
-  <li>{{ video.title }}</li>
-  {% empty %}
-  <li class="text-green-500">No missing videos!</li>
-  {% endfor %}
-</ul>
-
-{% if extra_videos %}
-<h1 class="text-2xl font-bold mb-4">Videos not saved</h1>
-{% endif %}
-
-<ul class="list-disc text-white pl-5 space-y-1">
-  {% for video in extra_videos %}
-  <li>{{ video.title }}</li>
-  {% endfor %}
-</ul>

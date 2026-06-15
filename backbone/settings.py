@@ -18,7 +18,6 @@ import sentry_sdk
 
 from pathlib import Path
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -103,30 +102,18 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": DB_FOLDER / "db.sqlite3",
-        "TEST": {
-            "NAME": DB_FOLDER / "test" / "db.sqlite3",
-        },
     },
     "discord_db": {
         "NAME": DB_FOLDER / "discord_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
-        "TEST": {
-            "NAME": DB_FOLDER / "test" / "discord_db.sqlite3",
-        },
     },
     "extension_db": {
         "NAME": DB_FOLDER / "extension_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
-        "TEST": {
-            "NAME": DB_FOLDER / "test" / "extension_db.sqlite3",
-        },
     },
     "mytools_db": {
         "NAME": DB_FOLDER / "mytools_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
-        "TEST": {
-            "NAME": DB_FOLDER / "test" / "mytools_db.sqlite3",
-        },
     },
 }
 

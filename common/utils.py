@@ -19,18 +19,20 @@ def get_api_key(request):
     return None
 
 
-def require_token(app_name=None):
-    """
-    Decorator to require a valid API token.
-    Works for both function-based and class-based views.
-    """
+from functools import wraps
+from django.http import HttpResponseForbidden
+from .models import AppToken
+from .utils import get_api_key
 
+
+def require_token(app_name=None):
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(*args, **kwargs):
+
+            # CBV method: (self, request, ...)
             if hasattr(args[0], "request"):
-                self = args[0]
-                request = self.request
+                request = args[0].request
             else:
                 request = args[0]
 
@@ -41,7 +43,9 @@ def require_token(app_name=None):
 
             try:
                 token = AppToken.objects.get(
-                    at_app_token=key, at_is_active=True, at_app_name=app_name
+                    at_app_token=key,
+                    at_is_active=True,
+                    at_app_name=app_name,
                 )
             except AppToken.DoesNotExist:
                 return HttpResponseForbidden("Invalid or inactive token")
