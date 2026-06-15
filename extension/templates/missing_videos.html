@@ -21,12 +21,37 @@
   </button>
 
   <button
-    class="px-4 py-2 bg-blue-600 text-white rounded mb-2"
-    hx-get="/extension/scan-youtube-playlist/{{ token }}/{{ playlist_url }}"
-    hx-headers='{"X-API-KEY": "{{ token }}"}'
+    id="full-scan-btn"
+    type="button"
+    class="px-4 py-2 bg-blue-600 text-white rounded mb-2 disabled:cursor-not-allowed disabled:bg-blue-400"
   >
     Full Scan
   </button>
+
+  <section
+    id="scan-progress"
+    class="hidden rounded border border-zinc-800 bg-zinc-900 p-4 mb-4"
+  >
+    <div class="flex items-center justify-between text-sm text-zinc-200">
+      <strong>Checking YouTube availability</strong>
+      <span id="scan-percent">0%</span>
+    </div>
+    <div class="w-full bg-zinc-800 rounded-full h-2 my-3">
+      <div
+        id="scan-bar"
+        class="h-2 rounded-full bg-blue-500"
+        style="width: 0%"
+      ></div>
+    </div>
+    <p id="scan-status" class="text-zinc-300 text-sm">Starting scan…</p>
+    <p id="scan-current" class="text-zinc-400 text-sm">0 / 0 videos</p>
+    <p id="scan-title" class="text-zinc-400 text-sm">Current video: —</p>
+  </section>
+
+  <section
+    id="scan-results"
+    class="hidden rounded border border-zinc-800 bg-zinc-900 p-4 mb-4"
+  ></section>
 
   <!-- Spinner -->
   <div id="spinner" class="hidden justify-center my-4">
@@ -38,6 +63,7 @@
   <div
     id="videos-list"
     hx-get="/extension/youtube-playlist-missing-videos/{{ token }}/{{ playlist_url|urlencode }}"
+    hx-headers='{"X-API-KEY": "{{ token }}"}'
     hx-trigger="load, reload_videos"
     hx-indicator="#spinner"
     hx-swap="innerHTML"
@@ -46,5 +72,164 @@
     <!-- Missing videos will be injected here -->
   </div>
 </div>
+
+<script>
+  (function () {
+    const scanBtn = document.getElementById("full-scan-btn");
+    const progressBox = document.getElementById("scan-progress");
+    const percentLabel = document.getElementById("scan-percent");
+    const progressBar = document.getElementById("scan-bar");
+    const statusLabel = document.getElementById("scan-status");
+    const currentLabel = document.getElementById("scan-current");
+    const titleLabel = document.getElementById("scan-title");
+    const resultsBox = document.getElementById("scan-results");
+
+    const token = "{{ token }}";
+    const playlistUrl = "{{ playlist_url }}";
+
+    function setProgress(step, total, percent, message, currentTitle) {
+      progressBox.classList.remove("hidden");
+      percentLabel.textContent = `${percent}%`;
+      progressBar.style.width = `${percent}%`;
+      statusLabel.textContent = message;
+      currentLabel.textContent = `${step} / ${total} videos`;
+      titleLabel.textContent = currentTitle
+        ? `Current video: ${currentTitle}`
+        : "Current video: —";
+    }
+
+    function showResults(result) {
+      const videos = Array.isArray(result?.videos) ? result.videos : [];
+      const unavailableStatuses = new Set([
+        "unavailable",
+        "private",
+        "deleted",
+        "private_or_deleted",
+      ]);
+
+      const unavailableVideos = videos.filter((video) => {
+        const status = String(video.availability || "").toLowerCase();
+        return unavailableStatuses.has(status);
+      });
+
+      resultsBox.classList.remove("hidden");
+
+      if (!unavailableVideos.length) {
+        resultsBox.innerHTML = `
+          <h2 class="text-base font-semibold text-white mb-2">YouTube availability results</h2>
+          <p class="text-sm text-zinc-300 mb-3">No unavailable or private videos found.</p>
+        `;
+        return;
+      }
+
+      resultsBox.innerHTML = `
+        <h2 class="text-base font-semibold text-white mb-2">Unavailable or private videos</h2>
+        <p class="text-sm text-zinc-300 mb-3">${unavailableVideos.length} unavailable or private result${unavailableVideos.length === 1 ? "" : "s"} shown out of ${videos.length} checked.</p>
+        <ul class="space-y-2 text-sm text-zinc-200 max-h-80 overflow-y-auto">
+          ${unavailableVideos
+            .map((video) => {
+              const status = (video.availability || "unknown").replaceAll(
+                "_",
+                " ",
+              );
+              return `<li class="rounded border border-zinc-800 bg-zinc-950 p-2"><strong>${video.title || "Untitled video"}</strong><br /><span class="text-zinc-400">Availability: ${status}</span></li>`;
+            })
+            .join("")}
+        </ul>
+      `;
+    }
+
+    async function pollTask(taskId) {
+      try {
+        const response = await fetch(
+          `/extension/poll-scan-youtube-playlist?task_id=${taskId}`,
+          {
+            headers: { "X-API-KEY": token },
+          },
+        );
+
+        const data = await response.json();
+        const state = String(data.state || "").toUpperCase();
+
+        if (["PROGRESS", "STARTED", "PENDING"].includes(state)) {
+          setProgress(
+            data.current || 0,
+            data.total || 1,
+            data.percent || 0,
+            state === "PENDING"
+              ? "Scan is starting…"
+              : "Scanning YouTube availability…",
+            data.last_title || "—",
+          );
+          window.setTimeout(() => pollTask(taskId), 800);
+          return;
+        }
+
+        if (state === "SUCCESS") {
+          setProgress(
+            data.total || 0,
+            data.total || 0,
+            100,
+            "Scan complete.",
+            "All videos checked",
+          );
+          showResults(data.result || {});
+          scanBtn.disabled = false;
+          scanBtn.textContent = "Full Scan";
+          return;
+        }
+
+        if (state === "FAILURE") {
+          const errorText =
+            data.result?.error || data.error || "The scan failed unexpectedly.";
+          statusLabel.textContent = `Scan failed: ${errorText}`;
+          resultsBox.classList.remove("hidden");
+          resultsBox.innerHTML = `
+            <h2 class="text-base font-semibold text-white mb-2">Scan failed</h2>
+            <p class="text-sm text-rose-200">${errorText}</p>
+          `;
+          scanBtn.disabled = false;
+          scanBtn.textContent = "Full Scan";
+          return;
+        }
+
+        throw new Error("Scan did not finish cleanly.");
+      } catch (error) {
+        statusLabel.textContent = `Scan failed: ${error.message}`;
+        scanBtn.disabled = false;
+        scanBtn.textContent = "Full Scan";
+      }
+    }
+
+    scanBtn.addEventListener("click", async () => {
+      scanBtn.disabled = true;
+      scanBtn.textContent = "Scanning…";
+      resultsBox.classList.add("hidden");
+      progressBox.classList.remove("hidden");
+      setProgress(0, 1, 0, "Starting full YouTube availability scan…", "—");
+
+      try {
+        const response = await fetch(
+          `/extension/scan-youtube-playlist/${playlistUrl}`,
+          {
+            headers: { "X-API-KEY": token },
+          },
+        );
+
+        const payload = await response.json();
+
+        if (!payload.task_id) {
+          throw new Error("The scan could not be started.");
+        }
+
+        await pollTask(payload.task_id);
+      } catch (error) {
+        statusLabel.textContent = `Scan failed: ${error.message}`;
+        scanBtn.disabled = false;
+        scanBtn.textContent = "Full Scan";
+      }
+    });
+  })();
+</script>
 
 {% endblock %}

@@ -9,11 +9,11 @@ from extension.views import (
 
 urlpatterns = [
     path(
-        "scan-youtube-playlist-missing-videos/<token>/<url>",
+        "youtube-playlist-missing-videos/<token>/<url>",
         YoutubePlaylistMissingVideos.as_view(),
     ),
     path(
-        "trigger-scan-youtube-playlist",
+        "scan-youtube-playlist/<url>",
         ScanYoutubePlaylist.as_view(),
     ),
     path(

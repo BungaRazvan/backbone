@@ -74,11 +74,6 @@ def get_youtube_info(
         with YoutubeDL(ydl_opts) as ydl:
             data = ydl.extract_info(data["url"], download=False)
 
-    with open("yt.json", "w") as f:
-        import json
-
-        f.write(json.dumps(data, indent=2))
-
     return data
 
 
