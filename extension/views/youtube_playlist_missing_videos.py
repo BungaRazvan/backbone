@@ -12,20 +12,8 @@ from extension.models import YoutubePlaylist
 
 @method_decorator(xframe_options_exempt, name="dispatch")
 class YoutubePlaylistMissingVideos(TemplateView):
-    http_method_names = ["get", "options"]
+    http_method_names = ["get"]
     template_name = "missing_videos.html"
-
-    def options(self, request, *args, **kwargs):
-        response = HttpResponse(status=200)
-        origin = request.headers.get("Origin") or request.headers.get("HTTP_ORIGIN")
-
-        if origin:
-            response["Access-Control-Allow-Origin"] = origin
-
-        response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response["Access-Control-Allow-Headers"] = "Content-Type, X-API-KEY"
-
-        return response
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -85,13 +73,11 @@ class YoutubePlaylistMissingVideos(TemplateView):
             },
         )
 
+    # @require_token("extension")
     def get(self, request, *args, **kwargs):
         if kwargs.get("url") and request.headers.get("Hx-Trigger") == "videos-list":
             html = self.render_missing_videos(kwargs.get("url"))
             return HttpResponse(html)
-
-        if not kwargs.get("token"):
-            return HttpResponseBadRequest("Token not provided")
 
         context = self.get_context_data(**kwargs)
         context["token"] = kwargs.get("token")

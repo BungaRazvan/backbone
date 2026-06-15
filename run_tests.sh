@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
-cd "$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 PYTHON_BIN="${PYTHON:-python3}"
 
@@ -11,14 +11,18 @@ if [ -x "./venv/bin/python" ]; then
 fi
 
 COVERAGE=0
+ARGS=()
+
 for arg in "$@"; do
   if [ "$arg" = "--coverage" ]; then
     COVERAGE=1
+  else
+    ARGS+=("$arg")
   fi
 done
 
 if [ "$COVERAGE" -eq 1 ]; then
-  set -- "$@" --cov=. --cov-report=term-missing
+  ARGS+=("--cov=." "--cov-report=term-missing")
 fi
 
-"$PYTHON_BIN" -m pytest "$@"
+exec "$PYTHON_BIN" -m pytest "${ARGS[@]}"
