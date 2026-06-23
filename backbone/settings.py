@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "extension",
     "common",
     "mytools",
+    "cs2",
     #
     "django.contrib.admin",
     "django.contrib.auth",
