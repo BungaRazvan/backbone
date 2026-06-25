@@ -17,6 +17,7 @@ import os
 import sentry_sdk
 
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -32,11 +33,10 @@ SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=False)
+ENV = env.str("ENV")
 
 if not DEBUG:
-    sentry_sdk.init(
-        dsn=env("SENTRY_DSN"), send_default_pii=True, environment=env("ENV")
-    )
+    sentry_sdk.init(dsn=env("SENTRY_DSN"), send_default_pii=True, environment=ENV)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
@@ -174,6 +174,8 @@ REDIS_HOST = env.str("REDIS_HOST", "localhost")
 REDIS_PORT = env.str("REDIS_PORT", "6379")
 REDIS_DB = env.str("REDIS_DB", "0")
 
+FOX_CLOUD_API_KEY = env.str("FOX_CLOUD_API_KEY", default=None)
+
 REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
 CELERY_BROKER_URL = REDIS_URL
@@ -190,3 +192,4 @@ CELERY_RESULT_EXTENDED = True
 CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}
 
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_RESULT_EXPIRES = timedelta(days=31)
