@@ -1,15 +1,16 @@
+import json
+
 from rest_framework.views import APIView
 
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
+from django.http import HttpResponseBadRequest, HttpResponse
 
 from common.utils import require_token
 from discord.models import MinecraftPlayer
-
-import json
+from django.utils.decorators import method_decorator
 
 
 class MinecraftPlayersView(APIView):
-    @require_token("discord")
+    @method_decorator(require_token(app_name=("discord")))
     def post(self, request):
         try:
             data = json.loads(request.body)

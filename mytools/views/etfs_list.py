@@ -3,6 +3,7 @@ from datetime import timezone, datetime
 from django.views import View
 from django.http.response import JsonResponse
 from django.db.models import Prefetch, Sum
+from django.utils.decorators import method_decorator
 
 from common.utils import require_token
 from mytools.models import Etf, EtfShare, EtfEvent
@@ -12,7 +13,7 @@ from rest_framework import serializers
 class ShareSerializer(serializers.ModelSerializer):
     class Meta:
         model = EtfShare
-        exclude = ['efs_ef', 'efs_created_on']
+        exclude = ["efs_ef", "efs_created_on"]
 
 
 class DividentSerialiser(serializers.ModelSerializer):
@@ -87,7 +88,7 @@ class EtfSerializer(serializers.ModelSerializer):
 class EfsListView(View):
     http_method_names = ["get"]
 
-    @require_token("mytools")
+    @method_decorator(require_token(app_name=("mytools")))
     def get(self, request):
 
         today = datetime.now(timezone.utc).now().date()
@@ -113,7 +114,7 @@ class EfsListView(View):
             queryset=EtfEvent.objects.filter(
                 ee_pay_per_share__isnull=False,
                 ee_payment_date__lte=today,
-            ).order_by('-ee_payment_date'),
+            ).order_by("-ee_payment_date"),
             to_attr="dividents",
         )
 
@@ -128,7 +129,8 @@ class EfsListView(View):
             .annotate(
                 total_spent=Sum("shares__efs_total_price"),
                 total_shares=Sum("shares__efs_amount"),
-        ))
+            )
+        )
         data = EtfSerializer(etfs, many=True).data
 
         return JsonResponse(data, safe=False)

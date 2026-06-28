@@ -16,7 +16,7 @@ from common.utils import require_token
 class YoutubeSavePlaylist(View):
     http_method_names = ["post"]
 
-    @require_token("extension")
+    @method_decorator(require_token(app_name=("extension")))
     def post(self, request):
 
         try:

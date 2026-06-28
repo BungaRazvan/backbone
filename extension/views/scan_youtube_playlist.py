@@ -1,5 +1,6 @@
 from rest_framework.views import APIView
-from django.http.response import HttpResponseBadRequest, JsonResponse
+from django.http.response import JsonResponse
+from django.utils.decorators import method_decorator
 
 from common.utils import require_token
 from extension.tasks.scan_playlist import scan_youtube_playlist
@@ -10,7 +11,7 @@ from celery.result import AsyncResult
 class ScanYoutubePlaylist(APIView):
     http_method_names = ["get"]
 
-    @require_token("extension")
+    @method_decorator(require_token(app_name=("extension")))
     def get(self, request, *args, **kwargs):
 
         url = kwargs.get("url")
@@ -24,7 +25,7 @@ class ScanYoutubePlaylist(APIView):
 class PollYoutubePlaylist(APIView):
     http_method_names = ["get"]
 
-    @require_token("extension")
+    @method_decorator(require_token(app_name=("extension")))
     def get(self, request):
         args = request.GET
         task = args.get("task_id")
