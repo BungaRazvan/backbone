@@ -3,6 +3,7 @@ import re
 
 from rest_framework.views import APIView
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
+from django.utils.decorators import method_decorator
 
 from common.utils import require_token
 from discord.models import YoutubePlaylist, YoutubeSong
@@ -13,7 +14,7 @@ from distutils.util import strtobool
 
 
 class YoutubePlaylistView(APIView):
-    @require_token("discord")
+    @method_decorator(require_token(app_name=("discord")))
     def get(self, request):
 
         args = request.GET
@@ -63,7 +64,7 @@ class YoutubePlaylistView(APIView):
 
         return JsonResponse({"playlists": data})
 
-    @require_token("discord")
+    @method_decorator(require_token(app_name=("discord")))
     def post(self, request):
 
         try:
@@ -98,7 +99,7 @@ class YoutubePlaylistView(APIView):
         YoutubeSong.objects.bulk_create(to_create)
         return HttpResponse("Playlist created")
 
-    @require_token("discord")
+    @method_decorator(require_token(app_name=("discord")))
     def put(self, request):
         try:
             data = json.loads(request.body)
@@ -141,7 +142,7 @@ class YoutubePlaylistView(APIView):
 
         return HttpResponse("Playlist Modified")
 
-    @require_token("discord")
+    @method_decorator(require_token(app_name=("discord")))
     def delete(self, request):
         try:
             data = json.loads(request.body)

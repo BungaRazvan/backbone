@@ -73,7 +73,6 @@ class YoutubePlaylistMissingVideos(TemplateView):
             },
         )
 
-    # @require_token("extension")
     def get(self, request, *args, **kwargs):
         if kwargs.get("url") and request.headers.get("Hx-Trigger") == "videos-list":
             html = self.render_missing_videos(kwargs.get("url"))
