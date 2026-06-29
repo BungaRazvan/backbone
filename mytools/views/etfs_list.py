@@ -2,8 +2,8 @@ from datetime import timezone, datetime
 
 from django.views import View
 from django.http.response import JsonResponse
-from django.db.models import Prefetch, Sum
 from django.utils.decorators import method_decorator
+from django.db.models import Prefetch, Sum, Q
 
 from common.utils import require_token
 from mytools.models import Etf, EtfShare, EtfEvent
@@ -44,6 +44,8 @@ class EtfSerializer(serializers.ModelSerializer):
     total_spent = serializers.SerializerMethodField()
     total_shares = serializers.SerializerMethodField()
     total_dividents = serializers.SerializerMethodField()
+    total_compounding_cost = serializers.SerializerMethodField()
+    total_compounding_shares = serializers.SerializerMethodField()
 
     class Meta:
         model = Etf
@@ -70,6 +72,14 @@ class EtfSerializer(serializers.ModelSerializer):
     def get_total_spent(self, obj):
 
         return getattr(obj, "total_spent", None)
+
+    def get_total_compounding_cost(self, obj):
+
+        return getattr(obj, "total_compounding_cost", None)
+
+    def get_total_compounding_shares(self, obj):
+
+        return getattr(obj, "total_compounding_shares", None)
 
     def get_total_shares(self, obj):
 
@@ -129,6 +139,14 @@ class EfsListView(View):
             .annotate(
                 total_spent=Sum("shares__efs_total_price"),
                 total_shares=Sum("shares__efs_amount"),
+                total_compounding_cost=Sum(
+                    "shares__efs_total_price",
+                    filter=Q(shares__efs_funds=EtfShare.Funds.DIVIDENTS),
+                ),
+                total_compounding_shares=Sum(
+                    "shares__efs_amount",
+                    filter=Q(shares__efs_funds=EtfShare.Funds.DIVIDENTS),
+                ),
             )
         )
         data = EtfSerializer(etfs, many=True).data

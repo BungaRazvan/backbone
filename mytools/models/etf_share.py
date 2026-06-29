@@ -6,6 +6,10 @@ class EtfShare(models.Model):
         db_table = "etf_shares"
         app_label = "mytools"
 
+    class Funds(models.TextChoices):
+        SALARY = "salary", "Salary"
+        DIVIDENTS = "dividents", "Dividents"
+
     efs_id = models.AutoField(primary_key=True)
     efs_ef = models.ForeignKey(
         "mytools.Etf",
@@ -19,9 +23,12 @@ class EtfShare(models.Model):
     efs_total_price = models.DecimalField(
         max_digits=20, decimal_places=8, blank=False, null=False
     )
-    ets_funds = models.CharField(max_length=255, blank=True, null=True, choices=((
-        'salary', 'Salary'
-    ), ('dividents', 'Dividents')))
+    efs_funds = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        choices=Funds.choices,
+    )
     efs_purchase_date = models.DateField(blank=False, null=False)
     efs_created_on = models.DateField(auto_now_add=True)
 
