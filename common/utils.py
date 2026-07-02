@@ -1,5 +1,6 @@
 from functools import wraps
 from django.http import HttpResponseForbidden, HttpRequest
+
 from common.models import AppToken
 
 
@@ -81,36 +82,3 @@ def require_token(view_func=None, *, app_name):
         return wrapper
 
     return decorator
-
-
-# def require_token(app_name):
-#     def decorator(view_func):
-#         @wraps(view_func)
-#         def wrapper(*args, **kwargs):
-
-#             # CBV method: (self, request, ...)
-#             if hasattr(args[0], "request"):
-#                 request = args[0].request
-#             else:
-#                 request = args[0]
-
-#             key = get_api_key(request)
-
-#             if not key:
-#                 return HttpResponseForbidden("Missing API token")
-
-#             try:
-#                 token = AppToken.objects.get(
-#                     at_app_token=key,
-#                     at_is_active=True,
-#                     at_app_name=app_name,
-#                 )
-#             except AppToken.DoesNotExist:
-#                 return HttpResponseForbidden("Invalid or inactive token")
-
-#             request.app_token = token
-#             return view_func(*args, **kwargs)
-
-#         return wrapper
-
-#     return decorator

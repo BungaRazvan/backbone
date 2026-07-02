@@ -1,7 +1,9 @@
 from django.db import models
 
+from common.mixins import AutoStrMixin
 
-class InverterDataPoint(models.Model):
+
+class InverterDataPoint(AutoStrMixin, models.Model):
     class Meta:
         db_table = "inverter_data_points"
         app_label = "mytools"
@@ -17,6 +19,3 @@ class InverterDataPoint(models.Model):
     )
     idp_battery_charge_kwh = models.FloatField()
     idp_battery_discharge_kwh = models.FloatField()
-
-    def __str__(self):
-        return f"InverterDataPoint(id={self.id}, date={self.idp_date}, idp_solar_generation_kwh={self.idp_solar_generation_kwh}, idp_grid_export_kwh={self.idp_grid_export_kwh}, idp_home_consumption_kwh={self.idp_home_consumption_kwh})"
