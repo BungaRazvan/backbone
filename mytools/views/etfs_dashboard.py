@@ -3,15 +3,13 @@ import calendar
 
 from decimal import Decimal
 
-from django.utils import timezone
 from django.views import View
 from django.http.response import JsonResponse
 from django.utils.decorators import method_decorator
 from django.db.models import Sum, Q, F, OuterRef, Subquery
-from django.db.models.functions import Coalesce, Round
+from django.db.models.functions import Coalesce
 
 from rest_framework import serializers
-
 
 from common.utils import require_token
 from mytools.models import EtfShare, EtfEvent
