@@ -3,7 +3,17 @@ from django_celery_results.admin import TaskResultAdmin
 from django_celery_results.models import TaskResult
 
 # Register your models here.
-from mytools.models import EtfShare, Etf, EtfEvent, InverterDataPoint, TariffPeriod
+from mytools.models import (
+    EtfShare,
+    Etf,
+    EtfEvent,
+    InverterDataPoint,
+    TariffPeriod,
+    Bill,
+    Gas,
+    Seg,
+    Electricity,
+)
 
 
 class EtfShareInline(admin.StackedInline):
@@ -45,3 +55,31 @@ class InverterDataPointAdmin(admin.ModelAdmin):
 @admin.register(TariffPeriod)
 class TariffPeriodAdmin(admin.ModelAdmin):
     list_display = ("tp_tariff_name", "tp_provider_name")
+
+
+class ElectricityInline(admin.StackedInline):
+    model = Electricity
+    can_delete = False
+    min_num = 1
+    max_num = 1
+
+
+class GasInline(admin.StackedInline):
+    model = Gas
+    can_delete = False
+    min_num = 1
+    max_num = 1
+
+
+class SegInline(admin.StackedInline):
+    model = Seg
+    can_delete = False
+    min_num = 1
+    max_num = 1
+
+
+@admin.register(Bill)
+class BillAdmin(admin.ModelAdmin):
+    inlines = [Electricity, Gas, Seg]
+
+    list_display_links = ("b",)
