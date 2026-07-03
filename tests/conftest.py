@@ -1,5 +1,31 @@
 import pytest
 import socket
+import pytest
+
+from django.conf import settings
+from django.test import TestCase, TransactionTestCase
+
+
+@pytest.fixture(scope="session", autouse=True)
+def configure_global_test_databases():
+    """
+    Runs once per session. Forces Django's base test runners
+    to always look at and prepare all defined database aliases.
+    """
+    all_dbs = set(settings.DATABASES.keys())
+    TestCase.databases = all_dbs
+    TransactionTestCase.databases = all_dbs
+
+
+@pytest.fixture(autouse=True)
+def enable_multidb_access(db, request):
+    """
+    Runs per test. Dynamically patches pytest-django's runtime test wrapper
+    to ensure 'extension_db' is whitelisted for every single execution.
+    """
+    django_case = getattr(request.node, "_parent_test_case", None)
+    if django_case:
+        django_case.databases = list(settings.DATABASES.keys())
 
 
 @pytest.fixture

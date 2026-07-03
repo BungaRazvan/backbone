@@ -7,6 +7,7 @@ import pytest
 from extension.models import YoutubePlaylist
 from extension.views.scan_youtube_playlist import PollYoutubePlaylist
 from extension.views.youtube_playlist_missing_videos import YoutubePlaylistMissingVideos
+from tests.extension.views.youtube_playlist_missing_videos_test import playlist
 
 
 @pytest.fixture
@@ -27,14 +28,6 @@ def mock_missing_videos_dependencies():
         )
 
         yield
-
-
-@pytest.fixture
-def playlist(db):
-    return YoutubePlaylist.objects.create(
-        yp_name="SQLite Demo Playlist",
-        yp_videos=[{"title": "Track A"}, {"title": "Track B"}],
-    )
 
 
 @pytest.fixture
