@@ -28,7 +28,11 @@ class Bill(AutoStrMixin, models.Model):
     b_from_period = models.DateField(blank=True, null=True)
     b_to_period = models.DateField(blank=True, null=True)
     b_provider = models.CharField(
-        blank=False, null=False, max_length=255, choices=EnergyProvider.choices
+        blank=False,
+        null=False,
+        max_length=255,
+        choices=EnergyProvider.choices,
+        default=EnergyProvider.EDF,
     )
     b_total_amount_due = models.DecimalField(
         max_digits=10,
