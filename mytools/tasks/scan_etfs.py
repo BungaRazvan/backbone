@@ -1,7 +1,5 @@
 from celery import shared_task
 
-import requests
-
 from datetime import timezone, datetime
 
 from mytools.models import Etf

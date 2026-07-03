@@ -9,4 +9,4 @@ __pycache__
 /staticfiles
 celerybeat-schedule
 .pytest_cache
-
+*.dem
