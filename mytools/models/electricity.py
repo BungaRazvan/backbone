@@ -8,7 +8,7 @@ class Electricity(AutoStrMixin, models.Model):
         app_label = "mytools"
 
     e_bill = models.OneToOneField("Bill", on_delete=models.CASCADE, related_name="+")
-    e_kwh_used = models.DecimalField(max_digits=8, decimal_places=10)
+    e_kwh_used = models.DecimalField(max_digits=8, decimal_places=4)
     e_unit_rate = models.DecimalField(
         max_digits=6,
         decimal_places=4,

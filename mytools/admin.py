@@ -14,6 +14,7 @@ from mytools.models import (
     Seg,
     Electricity,
 )
+from mytools.utils import parse_edf_bill
 
 
 class EtfShareInline(admin.StackedInline):
@@ -60,26 +61,24 @@ class TariffPeriodAdmin(admin.ModelAdmin):
 class ElectricityInline(admin.StackedInline):
     model = Electricity
     can_delete = False
-    min_num = 1
-    max_num = 1
 
 
 class GasInline(admin.StackedInline):
     model = Gas
     can_delete = False
-    min_num = 1
-    max_num = 1
 
 
 class SegInline(admin.StackedInline):
     model = Seg
     can_delete = False
-    min_num = 1
-    max_num = 1
 
 
 @admin.register(Bill)
 class BillAdmin(admin.ModelAdmin):
-    inlines = [Electricity, Gas, Seg]
+    inlines = [ElectricityInline, GasInline, SegInline]
 
-    list_display_links = ("b",)
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+
+        if obj.b_file:
+            parse_edf_bill(obj.b_file.path)
