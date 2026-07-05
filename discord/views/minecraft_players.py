@@ -4,13 +4,13 @@ from rest_framework.views import APIView
 
 from django.http import HttpResponseBadRequest, HttpResponse
 
-from common.utils import require_token
+from common.auth.backends import app_auth
 from discord.models import MinecraftPlayer
-from django.utils.decorators import method_decorator
 
 
 class MinecraftPlayersView(APIView):
-    @method_decorator(require_token(app_name=("discord")))
+    authentication_classes = [app_auth("discord")]
+
     def post(self, request):
         try:
             data = json.loads(request.body)

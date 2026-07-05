@@ -11,7 +11,7 @@ from django.db.models.functions import Coalesce
 
 from rest_framework import serializers
 
-from common.utils import require_token
+from common.auth.decorators import require_token
 from mytools.models import EtfShare, EtfEvent
 
 

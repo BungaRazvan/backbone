@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from django.utils.decorators import method_decorator
 
-from common.utils import require_token
+from common.auth.decorators import require_token
 
 
 @method_decorator(csrf_exempt, name="dispatch")
