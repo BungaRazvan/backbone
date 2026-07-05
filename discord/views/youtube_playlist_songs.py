@@ -1,17 +1,16 @@
 from rest_framework.views import APIView
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
-from django.utils.decorators import method_decorator
+from django.http import JsonResponse, HttpResponseBadRequest
 
 
-from common.utils import require_token
+from common.auth.backends import app_auth
 from discord.models import YoutubeSong
 from discord.views.get_youtube_tracks import get_videos, get_youtube_info
 
 
 class YoutubePlaylistSongsView(APIView):
     http_method_names = ["post"]
+    authentication_classes = [app_auth("discord")]
 
-    @method_decorator(require_token(app_name=("discord")))
     def get(self, request):
         args = request.GET
 

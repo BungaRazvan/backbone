@@ -8,3 +8,4 @@ __pycache__/
 /venv
 celerybeat-schedule
 .pytest_cache
+/media

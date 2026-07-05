@@ -1,16 +1,16 @@
 from rest_framework.views import APIView
 
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
-from django.utils.decorators import method_decorator
 
-from common.utils import require_token
+from common.auth.backends import app_auth
 from discord.models import MinecraftStat, MinecraftPlayer
 
 import json
 
 
 class MinecraftStatsView(APIView):
-    @method_decorator(require_token(app_name=("discord")))
+    authentication_classes = [app_auth("discord")]
+
     def post(self, request):
 
         try:
@@ -42,7 +42,6 @@ class MinecraftStatsView(APIView):
 
         return HttpResponse(status=201 if created else 200)
 
-    @method_decorator(require_token(app_name=("discord")))
     def get(self, request):
         args = request.GET
 

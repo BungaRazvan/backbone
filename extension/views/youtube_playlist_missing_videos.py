@@ -1,6 +1,5 @@
 from django.views.generic import TemplateView
 
-from common.utils import require_token
 from discord.views.get_youtube_tracks import get_videos, get_youtube_info
 from django.http import HttpResponse, HttpResponseBadRequest
 

@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from django.http.response import JsonResponse
 from django.utils.decorators import method_decorator
 
-from common.utils import require_token
+from common.auth.decorators import require_token
 from extension.tasks.scan_playlist import scan_youtube_playlist
 
 from celery.result import AsyncResult

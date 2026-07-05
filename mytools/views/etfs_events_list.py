@@ -4,7 +4,7 @@ from django.http.response import JsonResponse
 from django.utils.decorators import method_decorator
 from django.db.models import Prefetch, Q, Min
 
-from common.utils import require_token
+from common.auth.decorators import require_token
 from mytools.models import Etf, EtfShare, EtfEvent
 from rest_framework import serializers
 

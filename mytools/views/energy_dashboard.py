@@ -17,7 +17,7 @@ from django.db.models.functions import Coalesce, Round, ExtractDay, Cast
 
 from rest_framework import serializers
 
-from common.utils import require_token
+from common.auth.decorators import require_token
 from mytools.models import InverterDataPoint, TariffPeriod
 
 MICROSECONDS_IN_A_DAY = 86400000000
