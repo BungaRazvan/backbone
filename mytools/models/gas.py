@@ -6,8 +6,13 @@ from common.mixins import AutoStrMixin
 class Gas(AutoStrMixin, models.Model):
     class Meta:
         app_label = "mytools"
+        db_table = "gas"
 
     g_bill = models.OneToOneField("Bill", on_delete=models.CASCADE, related_name="gas")
+
+    g_from_period = models.DateField(blank=True, null=True)
+    g_to_period = models.DateField(blank=True, null=True)
+
     g_kwh_used = models.DecimalField(
         max_digits=10, decimal_places=4, help_text="Energy used in kWh"
     )

@@ -1,8 +1,10 @@
+import os
+
 from django.contrib import admin
 from django_celery_results.admin import TaskResultAdmin
 from django_celery_results.models import TaskResult
 
-from mytools.services.parse_bill.edf_energy import parse_bill
+from mytools.services.parse_bill import BillParseService, BillParseParameters
 
 # Register your models here.
 from mytools.models import (
@@ -82,40 +84,16 @@ class BillAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
         if obj.b_file:
-            data = parse_bill(obj.b_file.path)
-            obj.b_from_period = data.get("electricity", {}).get("from_date")
-            obj.b_to_period = data.get("electricity", {}).get("to_date")
-            obj.b_total_amount_due = data.get("net_total_amount_due")
+            service = BillParseService()
+            args = BillParseParameters(file_path=obj.b_file.path)
+            results = service.extract_details(obj.b_provider, args)
             obj.save()
+            os.remove(obj.b_file.path)
 
-            if all(data.get("electricity", {}).values()):
-                json_data = data.get("electricity", {})
-                Electricity.objects.update_or_create(
-                    e_bill=obj,
-                    defaults={
-                        "e_kwh_used": json_data.get("usage_kwh"),
-                        "e_standing_charge_total": json_data.get(
-                            "standing_charge_total"
-                        ),
-                        "e_standing_charge_rate": json_data.get("standing_charge_rate"),
-                        "e_total_cost": json_data.get("section_total"),
-                        "e_unit_rate": json_data.get("unit_rate_p_kwh"),
-                    },
-                )
+            if not results:
+                return
 
-                if all(data.get("gas", {}).values()):
-                    json_data = data.get("gas", {})
-                    Gas.objects.update_or_create(
-                        g_bill=obj,
-                        defaults={
-                            "g_kwh_used": json_data.get("usage_kwh"),
-                            "g_standing_charge_total": json_data.get(
-                                "standing_charge_total"
-                            ),
-                            "g_standing_charge_rate": json_data.get(
-                                "standing_charge_rate"
-                            ),
-                            "g_total_cost": json_data.get("section_total"),
-                            "g_unit_rate": json_data.get("unit_rate_p_kwh"),
-                        },
-                    )
+            for result in results.values():
+                model = result.to_model()
+                setattr(model, result.prefix() + "bill", obj)
+                print(model)

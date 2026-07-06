@@ -6,8 +6,13 @@ from common.mixins import AutoStrMixin
 class Seg(AutoStrMixin, models.Model):
     class Meta:
         app_label = "mytools"
+        db_table = "seg"
 
     s_bill = models.OneToOneField("Bill", on_delete=models.CASCADE, related_name="seg")
+
+    s_from_period = models.DateField(blank=True, null=True)
+    s_to_period = models.DateField(blank=True, null=True)
+
     s_kwh_exported = models.DecimalField(
         max_digits=10, decimal_places=4, help_text="Energy used in kWh"
     )
