@@ -20,7 +20,7 @@ class BillParseService:
 
         return parser
 
-    def extract_details(self, provider: str, args: Union[BillParseParameters, Dict]):
+    def extract_sections(self, provider: str, args: Union[BillParseParameters, Dict]):
 
         if isinstance(args, BillParseParameters):
             args = asdict(args)
@@ -28,4 +28,15 @@ class BillParseService:
         serializer = DataclassSerializer(data=args, dataclass=BillParseParameters)
         serializer.is_valid(raise_exception=True)
 
-        return self.get_parser(provider)().extract_details(serializer.validated_data)
+        return self.get_parser(provider)().extract_sections(serializer.validated_data)
+
+    # TODO less boilerplate better interface
+    def extract_date(self, provider: str, args: Union[BillParseParameters, Dict]):
+
+        if isinstance(args, BillParseParameters):
+            args = asdict(args)
+
+        serializer = DataclassSerializer(data=args, dataclass=BillParseParameters)
+        serializer.is_valid(raise_exception=True)
+
+        return self.get_parser(provider)().extract_date(serializer.validated_data)

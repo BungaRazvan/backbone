@@ -24,7 +24,7 @@ class BillParseParameters:
 
 
 @dataclasses.dataclass
-class BillResult:
+class BillSection:
     from_date: Optional[datetime.date] = None
     to_date: Optional[datetime.date] = None
 
@@ -38,29 +38,25 @@ class BillResult:
 
     category: Optional[UtilityCategory] = None
 
-    def prefix(self):
-        prefix_map = {
-            UtilityCategory.SEG: "s_",
-            UtilityCategory.ELECTRICITY: "e_",
-            UtilityCategory.GAS: "g_",
+    def model_mappings(self):
+        mappings = {
+            UtilityCategory.SEG: (Seg, "s_"),
+            UtilityCategory.ELECTRICITY: (Electricity, "e_"),
+            UtilityCategory.GAS: (Gas, "g_"),
         }
 
-        return prefix_map.get(self.category.value)
+        return mappings.get(self.category.value)
 
-    def to_model(self) -> Optional[Union[Electricity, Gas]]:
-        instance = None
-        prefix = self.prefix()
+    def to_model(self) -> Optional[Union[Electricity, Gas, Seg]]:
+        model_class, prefix = self.model_mappings()
 
         if prefix is None:
             return None
 
-        if self.category in [UtilityCategory.ELECTRICITY, UtilityCategory.SEG]:
-            instance = Electricity()
-        elif self.category == UtilityCategory.GAS:
-            instance = Gas()
-
-        if instance is None:
+        if model_class is None:
             return None
+
+        instance = model_class()
 
         for field in dataclasses.fields(self):
             if field.name == "category":
@@ -73,7 +69,11 @@ class BillResult:
 
 class BaseParser(ABC):
     @abstractmethod
-    def extract_details(
+    def extract_sections(
         self, args: BillParseParameters
-    ) -> Optional[Dict[UtilityCategory, BillResult]]:
-        pass
+    ) -> Optional[Dict[UtilityCategory, BillSection]]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def extract_date(self, args: BillParseParameters) -> Optional[datetime.date]:
+        raise NotImplementedError

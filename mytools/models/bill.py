@@ -1,7 +1,7 @@
+import datetime
 import os
 
 from django.db import models
-
 
 from common.mixins import AutoStrMixin
 
@@ -25,6 +25,8 @@ class Bill(AutoStrMixin, models.Model):
         app_label = "mytools"
 
     b_file = models.FileField(upload_to=edf_upload_path, blank=True, null=True)
+    b_date = models.DateField(blank=True, null=True, unique=True)
+
     b_provider = models.CharField(
         blank=False,
         null=False,
@@ -32,10 +34,17 @@ class Bill(AutoStrMixin, models.Model):
         choices=EnergyProvider.choices,
         default=EnergyProvider.EDF,
     )
-    b_total_amount_due = models.DecimalField(
+    b_total_cost = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        help_text="Grand total in Pounds (£)",
+        help_text="Grand total you actually pay after subtracting SEG (£)",
+        blank=True,
+        null=True,
+    )
+    b_gross_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="The pure total of what you used (£)",
         blank=True,
         null=True,
     )

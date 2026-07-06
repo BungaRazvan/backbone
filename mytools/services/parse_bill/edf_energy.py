@@ -1,3 +1,4 @@
+import datetime
 import re
 import pdfplumber
 
@@ -6,7 +7,7 @@ from os import PathLike
 
 from common.utils import parse_uk_date_to_object
 
-from .parameters import BaseParser, BillParseParameters, UtilityCategory, BillResult
+from .parameters import BaseParser, BillParseParameters, UtilityCategory, BillSection
 
 
 def match_periods(text: str):
@@ -28,11 +29,11 @@ def extract_usage(text: str, word: str):
 
 def parse_bill(
     pdf_path: Union[str, PathLike],
-) -> Optional[Dict[UtilityCategory, BillResult]]:
-    extracted_data: Dict[UtilityCategory, BillResult] = {
-        UtilityCategory.ELECTRICITY: BillResult(category=UtilityCategory.ELECTRICITY),
-        UtilityCategory.SEG: BillResult(category=UtilityCategory.SEG),
-        UtilityCategory.GAS: BillResult(category=UtilityCategory.GAS),
+) -> Optional[Dict[UtilityCategory, BillSection]]:
+    extracted_data: Dict[UtilityCategory, BillSection] = {
+        UtilityCategory.ELECTRICITY: BillSection(category=UtilityCategory.ELECTRICITY),
+        UtilityCategory.SEG: BillSection(category=UtilityCategory.SEG),
+        UtilityCategory.GAS: BillSection(category=UtilityCategory.GAS),
     }
 
     with pdfplumber.open(pdf_path) as pdf:
@@ -126,16 +127,35 @@ def parse_bill(
         cat: res
         for cat, res in extracted_data.items()
         if res.total_cost is not None
-        or res.kwh_used is not None
-        or res.from_date is not None
+        and res.kwh_used is not None
+        and res.to_date is not None
+        and res.from_date is not None
     }
 
     return final_output
 
 
 class EdfParser(BaseParser):
-    def extract_details(
+    def extract_sections(
         self, args: BillParseParameters
-    ) -> Dict[UtilityCategory, BillResult]:
+    ) -> Dict[UtilityCategory, BillSection]:
 
         return parse_bill(args.file_path)
+
+    def extract_date(self, args: BillParseParameters) -> Optional[datetime.date]:
+        with pdfplumber.open(args.file_path) as pdf:
+            text = pdf.pages[0].extract_text()
+
+            if not text.strip():
+                return None
+
+        reference_match = re.search(
+            r"Bill reference:.*?\(\s*(\d{1,2}\s+[A-Za-z]+\s+\d{4})\)",
+            text,
+            re.IGNORECASE,
+        )
+
+        if reference_match:
+            return parse_uk_date_to_object(reference_match.group(1))
+
+        return None

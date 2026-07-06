@@ -1,6 +1,9 @@
 import os
 
+from decimal import Decimal
+
 from django.contrib import admin
+from django.forms.models import model_to_dict
 from django_celery_results.admin import TaskResultAdmin
 from django_celery_results.models import TaskResult
 
@@ -79,6 +82,7 @@ class SegInline(admin.StackedInline):
 @admin.register(Bill)
 class BillAdmin(admin.ModelAdmin):
     inlines = [ElectricityInline, GasInline, SegInline]
+    list_display = ("b_provider", "b_gross_cost", "b_date")
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
@@ -86,14 +90,38 @@ class BillAdmin(admin.ModelAdmin):
         if obj.b_file:
             service = BillParseService()
             args = BillParseParameters(file_path=obj.b_file.path)
-            results = service.extract_details(obj.b_provider, args)
-            obj.save()
-            os.remove(obj.b_file.path)
+            sections = service.extract_sections(obj.b_provider, args)
+            gross_cost = Decimal("0.00")
+            total_cost = Decimal("0.00")
 
-            if not results:
+            if not sections.values():
                 return
 
-            for result in results.values():
+            for result in sections.values():
                 model = result.to_model()
-                setattr(model, result.prefix() + "bill", obj)
-                print(model)
+                model_class, prefix = result.model_mappings()
+                bill_attr = f"{prefix}bill"
+
+                if model is None:
+                    continue
+
+                instance_as_dict = model_to_dict(model)
+                instance_as_dict.pop(bill_attr, None)
+
+                model_class.objects.update_or_create(
+                    **{bill_attr: obj}, defaults=instance_as_dict
+                )
+
+                total_cost += Decimal(result.total_cost)
+
+                if not isinstance(model, Seg):
+                    gross_cost += Decimal(result.total_cost)
+
+            file_path = obj.b_file.path
+            obj.b_gross_cost = gross_cost
+            obj.b_total_cost = total_cost
+            obj.b_date = service.extract_date(obj.b_provider, args)
+            obj.b_file.delete(save=True)
+
+            if os.path.exists(file_path):
+                os.remove(file_path)

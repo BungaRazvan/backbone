@@ -7,6 +7,14 @@ ENV PYTHONUNBUFFERED=1
 # Set work directory
 WORKDIR /app
 
+# Install the essential compilers needed to build ARM wheels
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+
 # Upgrade pip and core build tools
 RUN python -m pip install --upgrade pip setuptools wheel
 

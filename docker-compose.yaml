@@ -7,8 +7,9 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
-      - ./databases:/app/databases
+      - backbone_db:/app/databases
       - ./staticfiles:/app/staticfiles
+      - backbone_media:/app/media
     security_opt:
       - seccomp=unconfined
     command: >
@@ -27,7 +28,8 @@ services:
     image: backbone:latest
     container_name: backbone_worker
     volumes:
-      - ./databases:/app/databases
+      - backbone_db:/app/databases
+      - backbone_media:/app/media
     env_file:
       - .env.prod
     command: celery -A backbone worker -l info -c 1
@@ -41,7 +43,7 @@ services:
     env_file:
       - .env.prod
     volumes:
-      - ./databases:/app/databases
+      - backbone_db:/app/databases
     command: celery -A backbone beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     depends_on:
       - redis
@@ -60,4 +62,8 @@ services:
 
 volumes:
   backbone_redis_data:
+    external: true
+  backbone_media:
+    external: true
+  backbone_db:
     external: true

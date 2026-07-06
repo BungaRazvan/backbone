@@ -21,7 +21,7 @@ def configure_global_test_databases():
 def enable_multidb_access(db, request):
     """
     Runs per test. Dynamically patches pytest-django's runtime test wrapper
-    to ensure 'extension_db' is whitelisted for every single execution.
+    to ensure databases are whitelisted for every single execution.
     """
     django_case = getattr(request.node, "_parent_test_case", None)
     if django_case:
@@ -87,3 +87,19 @@ def block_external_requests(monkeypatch):
         return original_getaddrinfo(host, *args, **kwargs)
 
     monkeypatch.setattr(socket, "getaddrinfo", assert_only_localhost)
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    # Execute the standard report-making process first
+    outcome = yield
+    report = outcome.get_result()
+
+    print(report.outcome)
+
+    # Strip stdout/stderr strictly from the setup phase section
+    if report.when == "setup":
+        # Clear out any captured sections specifically for the setup phase
+        report.sections = [
+            sec for sec in report.sections if "Captured stdout setup" not in sec[0]
+        ]
