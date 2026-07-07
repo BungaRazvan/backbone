@@ -87,19 +87,3 @@ def block_external_requests(monkeypatch):
         return original_getaddrinfo(host, *args, **kwargs)
 
     monkeypatch.setattr(socket, "getaddrinfo", assert_only_localhost)
-
-
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item, call):
-    # Execute the standard report-making process first
-    outcome = yield
-    report = outcome.get_result()
-
-    print(report.outcome)
-
-    # Strip stdout/stderr strictly from the setup phase section
-    if report.when == "setup":
-        # Clear out any captured sections specifically for the setup phase
-        report.sections = [
-            sec for sec in report.sections if "Captured stdout setup" not in sec[0]
-        ]
