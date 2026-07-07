@@ -3,3 +3,7 @@ from .etf_share import EtfShare
 from .etf_event import EtfEvent
 from .inverter_data_point import InverterDataPoint
 from .tarif_period import TariffPeriod
+from .bill import Bill
+from .electricity import Electricity
+from .seg import Seg
+from .gas import Gas

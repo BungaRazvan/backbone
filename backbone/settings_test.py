@@ -1,12 +1,14 @@
 # backbone/settings_test.py
 from .settings import *
-import logging
 
 # Loop through the databases defined in your base settings
 # and force them all to run lightning-fast in RAM
-for db_config in DATABASES.values():
+for db_name, db_config in DATABASES.items():
     db_config["ENGINE"] = "django.db.backends.sqlite3"
-    db_config["NAME"] = ":memory:"
+    db_config["NAME"] = f"file:{db_name}?mode=memory&cache=shared"
+    db_config["OPTIONS"] = {
+        "uri": True,
+    }
 
 
 # Your other test overrides remain the same

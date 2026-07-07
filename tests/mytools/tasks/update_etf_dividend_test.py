@@ -1,12 +1,13 @@
+import pytest
+
+
 from datetime import date
 
+from freezegun import freeze_time
 
 from mytools.models import Etf, EtfEvent
 from mytools.tasks.update_etf_dividend import update_dividend
-from mytools.tests.utils import yahoo_dividends
-import pytest
-from freezegun import freeze_time
-
+from tests.mytools.tasks.utils import yahoo_dividends
 
 pytestmark = pytest.mark.django_db(
     databases=["default", "mytools_db"],

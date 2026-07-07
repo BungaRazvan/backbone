@@ -3,6 +3,7 @@ import datetime
 from django.db import models
 
 from common.mixins import AutoStrMixin
+from mytools.models.bill import EnergyProvider
 
 
 class TariffPeriod(AutoStrMixin, models.Model):
@@ -10,9 +11,7 @@ class TariffPeriod(AutoStrMixin, models.Model):
         db_table = "tarif_periods"
         app_label = "mytools"
 
-    tp_provider_name = models.CharField(
-        max_length=255, help_text="e.g., Octopus, E.ON, OVO"
-    )
+    tp_provider_name = models.CharField(max_length=255, choices=EnergyProvider.choices)
     tp_tariff_name = models.CharField(
         max_length=255, help_text="e.g., Intelligent Go, Fixed v1"
     )
