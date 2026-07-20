@@ -8,10 +8,10 @@ class Electricity(AutoStrMixin, models.Model):
         app_label = "mytools"
         db_table = "electricity"
 
-    e_bill = models.OneToOneField(
+    e_bill = models.ForeignKey(
         "Bill",
         on_delete=models.CASCADE,
-        related_name="+",
+        related_name="electricity",
     )
 
     e_from_date = models.DateField()

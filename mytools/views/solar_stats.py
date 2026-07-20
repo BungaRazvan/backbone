@@ -1,8 +1,9 @@
-import datetime
+from typing import Optional
 
-from django.views import View
+import datetime
+import dataclasses
+
 from django.utils.decorators import method_decorator
-from django.http.response import JsonResponse
 from django.db.models import (
     Sum,
     OuterRef,
@@ -16,45 +17,73 @@ from django.db.models import (
 from django.db.models.functions import Coalesce, Round, ExtractDay, Cast
 
 from rest_framework import serializers
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
-from common.auth.decorators import require_token
+from common.auth.decorators import require_token, validate_arguments
 from mytools.models import InverterDataPoint, TariffPeriod
 
 MICROSECONDS_IN_A_DAY = 86400000000
 
 
-class EnergyStatsDashboardSerializer(serializers.Serializer):
-    lifetime_charge = serializers.FloatField()
-    lifetime_discharge = serializers.FloatField()
-    lifetime_home_consumption = serializers.FloatField()
-    lifetime_import = serializers.FloatField()
-    lifetime_export = serializers.FloatField()
+class SolarStatsSerializer(serializers.Serializer):
+    battery_charge = serializers.FloatField()
+    battery_discharge = serializers.FloatField()
+    home_consumption = serializers.FloatField()
+    grid_import = serializers.FloatField()
+    grid_export = serializers.FloatField()
     total_theoretical_cost = serializers.FloatField()
     total_exported_revenue = serializers.FloatField()
     total_standing_charge = serializers.FloatField()
     total_actual_cost = serializers.FloatField()
-    lifetime_savings = serializers.FloatField()
+    savings = serializers.FloatField()
     rte_percentage = serializers.SerializerMethodField()
 
     def get_rte_percentage(self, obj):
-        charge = obj.get("lifetime_charge") or 0.0
-        discharge = obj.get("lifetime_discharge") or 0.0
+        charge = obj.get("battery_charge") or 0.0
+        discharge = obj.get("battery_discharge") or 0.0
+
+        if charge <= 0:
+            return 0.0
 
         return round((discharge / charge * 100), 2) if charge > 0 else 100.0
 
 
-class EnergyStatsDashboard(View):
-    http_method_names = ["get"]
+@dataclasses.dataclass
+class Args:
+    statsPeriodType: Optional[str] = None
+    statsPeriod: Optional[int] = None
 
-    @method_decorator(require_token(app_name="mytools"))
-    def get(self, request):
 
-        totals = InverterDataPoint.objects.aggregate(
-            lifetime_charge=Sum("idp_battery_charge_kwh"),
-            lifetime_discharge=Sum("idp_battery_discharge_kwh"),
-            lifetime_home_consumption=Sum("idp_home_consumption_kwh"),
-            lifetime_import=Sum("idp_grid_import_kwh"),
-            lifetime_export=Sum("idp_grid_export_kwh"),
+class SolarStatsView(APIView):
+
+    @method_decorator([require_token(app_name="mytools"), validate_arguments(Args)])
+    def get(self, request, args: Args):
+
+        totals = InverterDataPoint.objects.all()
+        energy_stats_queryset = InverterDataPoint.objects.all()
+
+        if args.statsPeriodType == "month" and args.statsPeriod:
+            totals = totals.filter(
+                idp_date__month=args.statsPeriod,
+                idp_date__year=datetime.date.today().year,
+            )
+            energy_stats_queryset = energy_stats_queryset.filter(
+                idp_date__month=args.statsPeriod,
+                idp_date__year=datetime.date.today().year,
+            )
+        elif args.statsPeriodType == "year" and args.statsPeriod:
+            totals = totals.filter(idp_date__year=args.statsPeriod)
+            energy_stats_queryset = energy_stats_queryset.filter(
+                idp_date__year=args.statsPeriod
+            )
+
+        totals = totals.aggregate(
+            battery_charge=Sum("idp_battery_charge_kwh"),
+            battery_discharge=Sum("idp_battery_discharge_kwh"),
+            home_consumption=Sum("idp_home_consumption_kwh"),
+            grid_import=Sum("idp_grid_import_kwh"),
+            grid_export=Sum("idp_grid_export_kwh"),
         )
 
         tariff_subquery = TariffPeriod.objects.filter(
@@ -70,7 +99,7 @@ class EnergyStatsDashboard(View):
             tp_standard_export_rate__gt=0,
         ).values("tp_standard_export_rate")[:1]
 
-        energy_stats_queryset = InverterDataPoint.objects.annotate(
+        energy_stats_queryset = energy_stats_queryset.annotate(
             raw_import_rate=Subquery(tariff_import_subquery, output_field=FloatField()),
             raw_export_rate=Subquery(tariff_export_subquery, output_field=FloatField()),
         ).annotate(
@@ -105,7 +134,7 @@ class EnergyStatsDashboard(View):
             total_actual_cost=Coalesce(
                 Sum("actual_cost"), 0.0, output_field=FloatField()
             ),
-            lifetime_savings=Coalesce(
+            savings=Coalesce(
                 Round(Sum("total_savings_gbp"), 2), 0.0, output_field=FloatField()
             ),
         )
@@ -132,5 +161,6 @@ class EnergyStatsDashboard(View):
         )
 
         combined_data = {**totals, **energy_stats, **standing_rates}
-        serializer = EnergyStatsDashboardSerializer(combined_data)
-        return JsonResponse(safe=False, data=serializer.data)
+        serializer = SolarStatsSerializer(combined_data)
+
+        return Response(serializer.data)

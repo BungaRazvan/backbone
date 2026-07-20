@@ -29,8 +29,9 @@ def process_bills(provider: str):
 
         gross_cost = Decimal("0.00")
         total_cost = Decimal("0.00")
+        items = [result for sections in sections.values() for result in sections]
 
-        for result in sections.values():
+        for result in items:
             model = result.to_model()
 
             if model is None:

@@ -67,16 +67,19 @@ class TariffPeriodAdmin(admin.ModelAdmin):
 class ElectricityInline(admin.StackedInline):
     model = Electricity
     can_delete = False
+    extra = 0
 
 
 class GasInline(admin.StackedInline):
     model = Gas
     can_delete = False
+    extra = 0
 
 
 class SegInline(admin.StackedInline):
     model = Seg
     can_delete = False
+    extra = 0
 
 
 @admin.register(Bill)
@@ -97,7 +100,9 @@ class BillAdmin(admin.ModelAdmin):
             if not sections.values():
                 return
 
-            for result in sections.values():
+            items = [result for sections in sections.values() for result in sections]
+
+            for result in items:
                 model = result.to_model()
                 model_class, prefix = result.model_mappings()
                 bill_attr = f"{prefix}bill"

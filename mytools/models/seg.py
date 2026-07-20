@@ -8,7 +8,7 @@ class Seg(AutoStrMixin, models.Model):
         app_label = "mytools"
         db_table = "seg"
 
-    s_bill = models.OneToOneField("Bill", on_delete=models.CASCADE, related_name="seg")
+    s_bill = models.ForeignKey("Bill", on_delete=models.CASCADE, related_name="seg")
 
     s_from_date = models.DateField()
     s_to_date = models.DateField()
