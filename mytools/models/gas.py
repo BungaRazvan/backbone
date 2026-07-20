@@ -8,7 +8,7 @@ class Gas(AutoStrMixin, models.Model):
         app_label = "mytools"
         db_table = "gas"
 
-    g_bill = models.OneToOneField("Bill", on_delete=models.CASCADE, related_name="gas")
+    g_bill = models.ForeignKey("Bill", on_delete=models.CASCADE, related_name="gas")
 
     g_from_date = models.DateField()
     g_to_date = models.DateField()
