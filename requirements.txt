@@ -6,7 +6,7 @@ gunicorn==23.0.0
 packaging==25.0
 sqlparse==0.5.3
 typing_extensions==4.15.0
-yt-dlp==2025.9.26
+yt-dlp-2026.7.4
 sentry-sdk==2.39.0
 celery==5.3
 django-celery-beat==2.8.1
