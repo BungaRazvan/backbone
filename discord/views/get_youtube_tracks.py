@@ -24,7 +24,7 @@ class GetYoutubeTracksView(APIView):
             data = get_youtube_info(url, title)
             tracks = get_videos(data)
         except Exception as e:
-
+            print("here")
             sentry_sdk.capture_exception(e)
 
             return HttpResponse({"error": str(e)}, status=500)
@@ -39,11 +39,15 @@ def resolve_ytld_opts(
         "dump_single_json": True,
         "quiet": True,
         "extract_flat": True,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "mweb"],
+            }
+        },
     }
 
     if not title and ("list=RD" in (url or "") and not allow_rd_playlist):
         ydl_opts["noplaylist"] = True
-        # raise Exception()
 
     return ydl_opts
 

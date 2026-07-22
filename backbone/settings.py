@@ -35,8 +35,7 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG", default=False)
 ENV = env.str("ENV")
 
-if not DEBUG:
-    sentry_sdk.init(dsn=env("SENTRY_DSN"), send_default_pii=True, environment=ENV)
+sentry_sdk.init(dsn=env("SENTRY_DSN"), send_default_pii=True, environment=ENV)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
