@@ -35,7 +35,8 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG", default=False)
 ENV = env.str("ENV")
 
-sentry_sdk.init(dsn=env("SENTRY_DSN"), send_default_pii=True, environment=ENV)
+if not DEBUG:
+    sentry_sdk.init(dsn=env("SENTRY_DSN"), send_default_pii=True, environment=ENV)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
@@ -177,6 +178,8 @@ REDIS_PORT = env.str("REDIS_PORT", "6379")
 REDIS_DB = env.str("REDIS_DB", "0")
 
 FOX_CLOUD_API_KEY = env.str("FOX_CLOUD_API_KEY", default=None)
+MONTA_CLIENT_SECRET = env.str("MONTA_CLIENT_SECRET", default=None)
+MONTA_CLIENT_ID = env.str("MONTA_CLIENT_ID", default=None)
 
 REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 

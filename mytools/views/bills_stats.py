@@ -49,7 +49,7 @@ class BillStatsSerializer(serializers.ModelSerializer):
 
 class BillsStatsView(APIView):
     @method_decorator([require_token(app_name="mytools")])
-    def get(self, request, args):
+    def get(self, request):
 
         data = (
             Bill.objects.all()

@@ -1,3 +1,5 @@
+import json
+
 from datetime import date
 
 from celery import shared_task
@@ -10,7 +12,7 @@ from mytools.models import InverterDataPoint
 @shared_task
 def fetch_inverter_history_by_month(
     device_sn: str, target_year: int, target_month: int
-):
+) -> InverterDataPoint:
     """
     Fetches historical stats for an entire month at once using "dimension": "month".
     This bypasses the hourly-bucket rounding bugs of the Fox API and perfectly
