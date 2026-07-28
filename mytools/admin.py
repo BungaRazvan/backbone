@@ -20,6 +20,7 @@ from mytools.models import (
     Gas,
     Seg,
     Electricity,
+    ChargePointHistory,
 )
 
 
@@ -130,3 +131,17 @@ class BillAdmin(admin.ModelAdmin):
 
             if os.path.exists(file_path):
                 os.remove(file_path)
+
+
+@admin.register(ChargePointHistory)
+class ChargePointHistoryAdmin(admin.ModelAdmin):
+    list_display = (
+        "cph_kwh",
+        "cph_net_cost",
+        "cph_gross_cost",
+        "cph_started_at",
+        "cph_completed_at",
+        "cph_feed_in_loss",
+        "cph_battery_kwh",
+    )
+    ordering = ("-cph_completed_at",)

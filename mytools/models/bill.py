@@ -25,7 +25,10 @@ class Bill(AutoStrMixin, models.Model):
         app_label = "mytools"
 
     b_file = models.FileField(upload_to=edf_upload_path, blank=True, null=True)
-    b_date = models.DateField(blank=True, null=True, unique=True)
+    b_date = models.DateField(
+        blank=True,
+        null=True,
+    )
 
     b_provider = models.CharField(
         blank=False,
