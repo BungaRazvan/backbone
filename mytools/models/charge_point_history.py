@@ -91,7 +91,7 @@ class ChargePointHistory(AutoStrMixin, models.Model):
     def solar_savings(self) -> float:
         """Money saved by charging with solar instead of full grid power."""
 
-        if self.cph_theoretical_cost is not None and self.true_cost is not None:
-            return float(self.cph_theoretical_cost - self.true_cost)
+        if self.cph_gross_cost is not None and self.cph_net_cost is not None:
+            return float(self.cph_gross_cost - self.cph_net_cost)
 
         return 0.0
