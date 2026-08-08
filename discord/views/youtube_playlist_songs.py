@@ -5,21 +5,24 @@ from django.http import JsonResponse, HttpResponseBadRequest
 from common.auth.backends import app_auth
 from discord.models import YoutubeSong
 from discord.views.get_youtube_tracks import get_videos, get_youtube_info
+from dataclasses import dataclass
+from django.utils.decorators import method_decorator
+from common.auth.decorators import require_token, validate_arguments
+
+
+@dataclass
+class Args:
+    playlist_id: str
+    user_id: str
+    guild_id: str
 
 
 class YoutubePlaylistSongsView(APIView):
-    http_method_names = ["post"]
-    authentication_classes = [app_auth("discord")]
-
-    def get(self, request):
-        args = request.GET
-
-        playlist_id = args.get("playlist_id")
-        user_id = args.get("user_id")
-        guild_id = args.get("guild_id")
-
-        if not playlist_id or not user_id or not guild_id:
-            return HttpResponseBadRequest("Missing arguments")
+    @method_decorator([require_token(app_name="discord"), validate_arguments(Args)])
+    def get(self, request, args: Args):
+        playlist_id = args.playlist_id
+        user_id = args.user_id
+        guild_id = args.guild_id
 
         songs = YoutubeSong.objects.filter(
             ys_playlist_id=playlist_id,

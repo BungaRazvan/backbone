@@ -9,7 +9,8 @@ from os import PathLike
 
 from common.utils import parse_uk_date_to_object
 
-from .parameters import BaseParser, BillParseParameters, UtilityCategory, BillSection
+from .parameters import BillParseParameters, UtilityCategory, BillSection
+from .base import BaseParser
 
 
 def match_periods(text: str):
@@ -143,7 +144,6 @@ def parse_bill(
         # Append this individual parsed section to its category list
         extracted_data[category].append(result)
 
-    print(extracted_data[UtilityCategory.GAS])
     # 4. Filter out incomplete section objects
     final_output = {}
 

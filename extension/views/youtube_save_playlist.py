@@ -1,6 +1,6 @@
 import json
 
-from django.views import View
+from rest_framework.views import APIView
 from django.http import HttpResponseBadRequest, HttpResponse
 
 from discord.views.get_youtube_tracks import get_videos, get_youtube_info
@@ -9,27 +9,22 @@ from django.views.decorators.csrf import csrf_exempt
 
 from django.utils.decorators import method_decorator
 
-from common.auth.decorators import require_token
+from common.auth.decorators import require_token, validate_arguments
+from dataclasses import dataclass
+
+
+@dataclass
+class Args:
+    url: str
 
 
 @method_decorator(csrf_exempt, name="dispatch")
-class YoutubeSavePlaylist(View):
-    http_method_names = ["post"]
+class YoutubeSavePlaylist(APIView):
 
-    @method_decorator(require_token(app_name=("extension")))
-    def post(self, request):
+    @method_decorator([require_token(app_name=("extension")), validate_arguments(Args)])
+    def post(self, request, args: Args):
 
-        try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return HttpResponseBadRequest("Invalid request")
-
-        if not data.get("url"):
-            return HttpResponseBadRequest("Invalid request")
-
-        data = get_youtube_info(
-            "https://www.youtube.com/playlist?list=" + data.get("url")
-        )
+        data = get_youtube_info("https://www.youtube.com/playlist?list=" + args.url)
         videos = get_videos(data)
 
         if not data.get("title"):

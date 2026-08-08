@@ -11,6 +11,11 @@ from django.utils.decorators import method_decorator
 from django.db.models import Prefetch, F, Sum
 
 
+@dataclasses.dataclass
+class Args:
+    statsYear: int
+
+
 class BillStatsSerializer(serializers.ModelSerializer):
     month = serializers.SerializerMethodField()
     costs = serializers.SerializerMethodField()
@@ -48,11 +53,12 @@ class BillStatsSerializer(serializers.ModelSerializer):
 
 
 class BillsStatsView(APIView):
-    @method_decorator([require_token(app_name="mytools")])
-    def get(self, request):
+    @method_decorator([require_token(app_name="mytools"), validate_arguments(Args)])
+    def get(self, request, args: Args):
 
         data = (
             Bill.objects.all()
+            .filter(b_date__year=args.statsYear)
             .prefetch_related(
                 Prefetch(
                     "electricity",

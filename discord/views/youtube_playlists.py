@@ -10,21 +10,53 @@ from discord.models import YoutubePlaylist, YoutubeSong
 from discord.views.get_youtube_tracks import get_videos, get_youtube_info
 
 from distutils.util import strtobool
+from dataclasses import dataclass
+from django.utils.decorators import method_decorator
+from common.auth.decorators import require_token, validate_arguments
+from discord.views.minecraft_players import Args
+
+
+@dataclass
+class ArgsGet:
+    user_id: str
+    guild_id: str
+    playlist_id: str = None
+    play_mode: bool = False
+
+
+@dataclass
+class ArgsPost:
+    user_id: str
+    guild_id: str
+    playlist_name: str
+    playlist_songs: str
+
+
+@dataclass
+class ArgsPut:
+    user_id: str
+    guild_id: str
+    playlist_id: str
+    playlist_name: str
+    playlist_songs: str
+
+
+@dataclass
+class ArgsDelete:
+    user_id: str
+    guild_id: str
+    playlist_id: str
 
 
 class YoutubePlaylistView(APIView):
-    authentication_classes = [app_auth("discord")]
 
-    def get(self, request):
+    @method_decorator([require_token(app_name="discord"), validate_arguments(ArgsGet)])
+    def get(self, request, args: ArgsGet):
 
-        args = request.GET
-        user_id = args.get("user_id")
-        guild_id = args.get("guild_id")
-        playlist_id = args.get("playlist_id")
-        play_mode = strtobool(args.get("play_mode", "false"))
-
-        if not user_id or not guild_id:
-            return HttpResponseBadRequest("Missing arguments")
+        user_id = args.user_id
+        guild_id = args.guild_id
+        playlist_id = args.playlist_id
+        play_mode = args.play_mode
 
         if playlist_id is not None:
             try:
@@ -64,20 +96,13 @@ class YoutubePlaylistView(APIView):
 
         return JsonResponse({"playlists": data})
 
-    def post(self, request):
+    @method_decorator([require_token(app_name="discord"), validate_arguments(ArgsPost)])
+    def post(self, request, args: ArgsPost):
 
-        try:
-            data = json.loads(request.body)
-        except:
-            return HttpResponseBadRequest("Invalid request")
-
-        user_id = data.get("user_id")
-        guild_id = data.get("guild_id")
-        name = data.get("playlist_name")
-        songs_list = data.get("playlist_songs")
-
-        if not user_id or not guild_id or not name or not songs_list:
-            return HttpResponseBadRequest("Missing arguments")
+        user_id = args.user_id
+        guild_id = args.guild_id
+        name = args.playlist_name
+        songs_list = args.playlist_songs
 
         songs = [s.strip() for s in re.split(r"[,\s]+", songs_list) if s.strip()]
 
@@ -98,20 +123,13 @@ class YoutubePlaylistView(APIView):
         YoutubeSong.objects.bulk_create(to_create)
         return HttpResponse("Playlist created")
 
-    def put(self, request):
-        try:
-            data = json.loads(request.body)
-        except:
-            return HttpResponseBadRequest("Invalid request")
-
-        user_id = data.get("user_id")
-        guild_id = data.get("guild_id")
-        playlist_id = data.get("playlist_id")
-        songs_list = data.get("playlist_songs")
-        name = data.get("playlist_name")
-
-        if not user_id or not guild_id or not playlist_id or not name or not songs_list:
-            return HttpResponseBadRequest("Missing arguments")
+    @method_decorator([require_token(app_name="discord"), validate_arguments(ArgsPut)])
+    def put(self, request, args: ArgsPut):
+        user_id = args.user_id
+        guild_id = args.guild_id
+        playlist_id = args.playlist_id
+        songs_list = args.playlist_songs
+        name = args.playlist_name
 
         songs = [s.strip() for s in re.split(r"[,\s]+", songs_list) if s.strip()]
 
@@ -140,18 +158,13 @@ class YoutubePlaylistView(APIView):
 
         return HttpResponse("Playlist Modified")
 
-    def delete(self, request):
-        try:
-            data = json.loads(request.body)
-        except:
-            return HttpResponseBadRequest("Invalid request")
-
-        user_id = data.get("user_id")
-        guild_id = data.get("guild_id")
-        playlist_id = data.get("playlist_id")
-
-        if not user_id or not guild_id or not playlist_id:
-            return HttpResponseBadRequest("Missing arguments")
+    @method_decorator(
+        [require_token(app_name="discord"), validate_arguments(ArgsDelete)]
+    )
+    def delete(self, request, args: ArgsDelete):
+        user_id = args.user_id
+        guild_id = args.guild_id
+        playlist_id = args.playlist_id
 
         try:
             playlist = YoutubePlaylist.objects.get(

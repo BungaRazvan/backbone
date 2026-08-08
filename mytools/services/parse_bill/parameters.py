@@ -4,10 +4,8 @@ import enum
 import dataclasses
 import datetime
 
-from abc import ABC, abstractmethod
 
-from typing import Union, Optional, Dict
-from pathlib import Path
+from typing import Union, Optional
 
 from mytools.models import Seg, Electricity, Gas
 
@@ -65,15 +63,3 @@ class BillSection:
             setattr(instance, prefix + field.name, getattr(self, field.name))
 
         return instance
-
-
-class BaseParser(ABC):
-    @abstractmethod
-    def extract_sections(
-        self, args: BillParseParameters
-    ) -> Optional[Dict[UtilityCategory, BillSection]]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def extract_date(self, args: BillParseParameters) -> Optional[datetime.date]:
-        raise NotImplementedError

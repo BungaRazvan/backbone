@@ -3,7 +3,7 @@ import calendar
 
 from decimal import Decimal
 
-from django.views import View
+from rest_framework.views import APIView
 from django.http.response import JsonResponse
 from django.utils.decorators import method_decorator
 from django.db.models import Sum, Q, F, OuterRef, Subquery
@@ -41,8 +41,7 @@ class EtfsDashboardSerializer(serializers.Serializer):
         return round(roi, 2)
 
 
-class EtfsDashboard(View):
-    http_method_names = ["get"]
+class EtfsDashboard(APIView):
 
     @method_decorator(require_token(app_name=("mytools")))
     def get(self, request):
