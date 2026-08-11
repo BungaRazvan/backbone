@@ -22,7 +22,9 @@ for arg in "$@"; do
 done
 
 if [ "$COVERAGE" -eq 1 ]; then
-  ARGS+=("--cov=." "--cov-report=term-missing")
+  "$PYTHON_BIN" -m coverage run -m pytest "${ARGS[@]}"
+  "$PYTHON_BIN" -m coverage html -d htmlcov
+  exit 0
 fi
 
 exec "$PYTHON_BIN" -m pytest "${ARGS[@]}"

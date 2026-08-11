@@ -111,7 +111,6 @@ def scan_youtube_playlist(self, url: str) -> dict:
             )
 
     return {
-        "status": "Complete",
         "videos": results,
         "unavailable_tracks": unavailable_tracks,
         "unavailable_count": len(unavailable_tracks),

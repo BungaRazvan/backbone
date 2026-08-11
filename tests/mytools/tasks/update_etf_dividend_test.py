@@ -9,10 +9,6 @@ from mytools.models import Etf, EtfEvent
 from mytools.tasks.update_etf_dividend import update_dividend
 from tests.mytools.tasks.utils import yahoo_dividends
 
-pytestmark = pytest.mark.django_db(
-    databases=["default", "mytools_db"],
-)
-
 
 @pytest.fixture
 def etf(db):

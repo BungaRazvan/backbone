@@ -1,24 +1,29 @@
 import json
 
 from rest_framework.views import APIView
+from dataclasses import dataclass
 
 from django.http import HttpResponseBadRequest, HttpResponse
+from django.utils.decorators import method_decorator
+from common.auth.decorators import require_token, validate_arguments
 
 from common.auth.backends import app_auth
 from discord.models import MinecraftPlayer
 
 
+@dataclass
+class Args:
+    mc_server_id: str
+    mc_players: list
+
+
 class MinecraftPlayersView(APIView):
-    authentication_classes = [app_auth("discord")]
 
-    def post(self, request):
-        try:
-            data = json.loads(request.body)
-        except:
-            return HttpResponseBadRequest("Invalid request")
+    @method_decorator([require_token(app_name="discord"), validate_arguments(Args)])
+    def post(self, request, args: Args):
 
-        mc_server_id = data.get("mc_server_id")
-        mc_players = data.get("mc_players") or []
+        mc_server_id = args.mc_server_id
+        mc_players = args.mc_players
 
         if not mc_server_id:
             return HttpResponseBadRequest("Missing identifier")

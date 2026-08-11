@@ -11,3 +11,5 @@ celerybeat-schedule
 .pytest_cache
 media/*_bills
 media/cs_matches/*
+/htmlcov
+.coverage

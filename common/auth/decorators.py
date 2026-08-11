@@ -1,5 +1,5 @@
 from functools import wraps
-from django.http import HttpResponseForbidden, HttpRequest
+from django.http import HttpResponseForbidden, HttpRequest, request
 
 from common.utils import get_api_key
 from common.models import AppToken
@@ -83,10 +83,22 @@ def validate_arguments(dataclass_cls):
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
-            if request.method in ["POST", "PUT", "PATCH"]:
-                incoming_data = request.POST
-            else:
-                incoming_data = request.GET
+
+            incoming_data = {}
+
+            if hasattr(request, "query_params") and request.query_params:
+                incoming_data.update(request.query_params.dict())
+            elif request.GET:
+                incoming_data.update(request.GET.dict())
+
+            if hasattr(request, "data") and request.data:
+                if hasattr(request.data, "dict"):
+                    incoming_data.update(request.data.dict())
+                else:
+                    incoming_data.update(request.data)
+
+            elif request.POST:
+                incoming_data.update(request.POST.dict())
 
             serializer = DataclassSerializer(
                 data=incoming_data, dataclass=dataclass_cls

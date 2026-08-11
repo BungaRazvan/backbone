@@ -9,3 +9,10 @@ __pycache__/
 celerybeat-schedule
 .pytest_cache
 /media
+/htmlcov
+.coverage
+.coveragerc
+/tests
+/staticfiles
+.git
+.idea

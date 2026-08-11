@@ -1,35 +1,38 @@
 import json
 
-from django.views import View
+from rest_framework import APIView
 
-from discord.models import QueuePictures, QueueIntervals
+from discord.models import QueuePicture, QueueInterval
 from django.http import JsonResponse
+from dataclasses import dataclass
+from django.utils.decorators import method_decorator
+from common.auth.decorators import require_token, validate_arguments
 
 
-class QueueImages(View):
-    http_method_names = ["post"]
+@dataclass
+class Args:
+    interval_name: str
+    channel_name: str
+    user_id: str
+    number: int = 1
+    delete: bool = False
 
-    def post(self, request):
-        try:
-            body = json.loads(request.body.decode("utf-8"))
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+class QueueImages(APIView):
+
+    @method_decorator([require_token(app_name="discord"), validate_arguments(Args)])
+    def post(self, request, args: Args):
 
         # Extract required fields
-        interval_name = body.get("interval_name")
-        channel_name = body.get("channel_name")
-        user_id = body.get("user_id")
-        urls = body.get("urls")
-        at = body.get("at")
-
-        # Optional
-        interval_description = body.get("interval_description")
-
-        if not all([interval_name, channel_name, user_id, urls, at]):
-            return JsonResponse({"error": "Missing required fields"}, status=400)
+        interval_name = args.interval_name
+        channel_name = args.channel_name
+        user_id = args.user_id
+        urls = args.urls
+        at = args.at
+        interval_description = args.interval_description
 
         # Check or create interval
-        interval, created = QueueIntervals.objects.get_or_create(
+        interval, created = QueueInterval.objects.get_or_create(
             qi_user_id=user_id,
             qi_name=interval_name,
             qi_channel=channel_name,
@@ -40,9 +43,9 @@ class QueueImages(View):
         )
         # Add images
         queue_images = [
-            QueuePictures(qp_image=url, qp_interval_id=interval) for url in urls
+            QueuePicture(qp_image=url, qp_interval_id=interval) for url in urls
         ]
-        QueuePictures.objects.bulk_create(queue_images, batch_size=20)
+        QueuePicture.objects.bulk_create(queue_images, batch_size=20)
 
         if created:
             return JsonResponse(

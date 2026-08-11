@@ -1,6 +1,6 @@
 from datetime import timezone, datetime
 
-from django.views import View
+from rest_framework.views import APIView
 from django.http.response import JsonResponse
 from django.utils.decorators import method_decorator
 from django.db.models import Prefetch, Sum, Q
@@ -95,8 +95,7 @@ class EtfSerializer(serializers.ModelSerializer):
         )
 
 
-class EfsListView(View):
-    http_method_names = ["get"]
+class EfsListView(APIView):
 
     @method_decorator(require_token(app_name=("mytools")))
     def get(self, request):

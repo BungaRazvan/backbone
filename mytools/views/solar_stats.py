@@ -14,7 +14,7 @@ from django.db.models import (
     DurationField,
     DecimalField,
 )
-from django.db.models.functions import Coalesce, Round, ExtractDay, Cast
+from django.db.models.functions import Coalesce, Round
 
 from rest_framework import serializers
 from rest_framework.views import APIView
@@ -32,10 +32,10 @@ class SolarStatsSerializer(serializers.Serializer):
     home_consumption = serializers.FloatField()
     grid_import = serializers.FloatField()
     grid_export = serializers.FloatField()
-    total_theoretical_cost = serializers.FloatField()
+    total_gross_cost = serializers.FloatField()
     total_exported_revenue = serializers.FloatField()
     total_standing_charge = serializers.FloatField()
-    total_actual_cost = serializers.FloatField()
+    total_net_cost = serializers.FloatField()
     savings = serializers.FloatField()
     rte_percentage = serializers.SerializerMethodField()
 
@@ -108,11 +108,11 @@ class SolarStatsView(APIView):
         )
 
         calculated_queryset = energy_stats_queryset.annotate(
-            theoretical_cost=ExpressionWrapper(
+            gross_cost=ExpressionWrapper(
                 F("idp_home_consumption_kwh") * F("import_rate"),
                 output_field=FloatField(),
             ),
-            actual_cost=ExpressionWrapper(
+            net_cost=ExpressionWrapper(
                 F("idp_grid_import_kwh") * F("import_rate"), output_field=FloatField()
             ),
             exported_revenue=ExpressionWrapper(
@@ -120,20 +120,18 @@ class SolarStatsView(APIView):
             ),
         ).annotate(
             total_savings_gbp=ExpressionWrapper(
-                F("theoretical_cost") - F("actual_cost"), output_field=FloatField()
+                F("gross_cost") - F("net_cost"), output_field=FloatField()
             )
         )
 
         energy_stats = calculated_queryset.aggregate(
-            total_theoretical_cost=Coalesce(
-                Sum("theoretical_cost"), 0.0, output_field=FloatField()
+            total_gross_cost=Coalesce(
+                Sum("gross_cost"), 0.0, output_field=FloatField()
             ),
             total_exported_revenue=Coalesce(
                 Sum("exported_revenue"), 0.0, output_field=FloatField()
             ),
-            total_actual_cost=Coalesce(
-                Sum("actual_cost"), 0.0, output_field=FloatField()
-            ),
+            total_net_cost=Coalesce(Sum("net_cost"), 0.0, output_field=FloatField()),
             savings=Coalesce(
                 Round(Sum("total_savings_gbp"), 2), 0.0, output_field=FloatField()
             ),

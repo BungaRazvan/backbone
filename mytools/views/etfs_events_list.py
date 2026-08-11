@@ -1,11 +1,11 @@
 from datetime import timezone, datetime
-from django.views import View
+from rest_framework.views import APIView
 from django.http.response import JsonResponse
 from django.utils.decorators import method_decorator
-from django.db.models import Prefetch, Q, Min
+from django.db.models import Q
 
 from common.auth.decorators import require_token
-from mytools.models import Etf, EtfShare, EtfEvent
+from mytools.models import Etf, EtfEvent
 from rest_framework import serializers
 
 
@@ -30,8 +30,7 @@ class EventSerializer(serializers.ModelSerializer):
         ]
 
 
-class EfsEventsListView(View):
-    http_method_names = ["get"]
+class EfsEventsListView(APIView):
 
     @method_decorator(require_token(app_name=("mytools")))
     def get(self, request):

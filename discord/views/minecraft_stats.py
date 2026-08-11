@@ -1,3 +1,5 @@
+from typing import Dict
+
 from rest_framework.views import APIView
 
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
@@ -6,24 +8,34 @@ from common.auth.backends import app_auth
 from discord.models import MinecraftStat, MinecraftPlayer
 
 import json
+from dataclasses import dataclass
+from django.utils.decorators import method_decorator
+from common.auth.decorators import require_token, validate_arguments
+
+
+@dataclass
+class ArgsPost:
+    uuid: str
+    stats: Dict
+    mc_server_id: str
+
+
+@dataclass
+class ArgsGet:
+    quild_id: str
 
 
 class MinecraftStatsView(APIView):
-    authentication_classes = [app_auth("discord")]
 
-    def post(self, request):
+    @method_decorator([require_token(app_name="discord"), validate_arguments(ArgsPost)])
+    def post(self, request, args: ArgsPost):
+        uuid = args.uuid
+        stats = args.stats
+        mc_server_id = args.mc_server_id
 
-        try:
-            data = json.loads(request.body)
-        except:
-            return HttpResponseBadRequest("Invalid request")
-
-        uuid = data.get("uuid")
-        stats = data.get("stats")
-        mc_server_id = data.get("mc_server_id")
-
-        if not uuid:
-            return HttpResponseBadRequest("Missing identifier")
+        uuid = args.uuid
+        stats = args.stats
+        mc_server_id = args.mc_server_id
 
         try:
             player = MinecraftPlayer.objects.get(
@@ -42,13 +54,9 @@ class MinecraftStatsView(APIView):
 
         return HttpResponse(status=201 if created else 200)
 
-    def get(self, request):
-        args = request.GET
-
-        ds_quild_id = args.get("quild_id")
-
-        if not ds_quild_id:
-            return HttpResponseBadRequest("Missing arguments")
+    @method_decorator([require_token(app_name="discord"), validate_arguments(ArgsGet)])
+    def get(self, request, args: ArgsGet):
+        ds_quild_id = args.quild_id
 
         players = MinecraftPlayer.objects.filter(
             mp_ds_quild_id=ds_quild_id

@@ -1,3 +1,4 @@
 from .youtube_playlist_missing_videos import YoutubePlaylistMissingVideos
 from .youtube_save_playlist import YoutubeSavePlaylist
-from .scan_youtube_playlist import ScanYoutubePlaylist, PollYoutubePlaylist
+from .scan_youtube_playlist import ScanYoutubePlaylist
+from .poll_youtube_playlist import PollYoutubePlaylist

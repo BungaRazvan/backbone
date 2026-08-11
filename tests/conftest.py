@@ -39,34 +39,64 @@ def mock_requests(mocker):
         responses = responses or {}
         history = []
 
+        def normalize_url(target_url):
+            normalized = target_url
+
+            if normalized.startswith("https://"):
+                normalized = normalized[len("https://") :]
+            elif normalized.startswith("http://"):
+                normalized = normalized[len("http://") :]
+
+            while "//" in normalized:
+                normalized = normalized.replace("//", "/")
+
+            return normalized.strip("/")
+
         def side_effect(method, url, *args, **kwargs):
             history.append({"method": method, "url": url, "kwargs": kwargs})
+            normalized_url = normalize_url(url)
+
             for pattern, data in responses.items():
-                if pattern in url:
-                    return mocker.Mock(
-                        status_code=data.get("status", 200),
-                        json=lambda: data.get("json", {}),
-                        text=data.get("text", ""),
-                        content=data.get("content", b""),
-                        raise_for_status=lambda: None,
-                    )
-            return mocker.Mock(status_code=404)
+                if normalize_url(pattern) in normalized_url:
+                    response = mocker.Mock(status_code=data.get("status", 200))
+                    response.json = mocker.Mock(return_value=data.get("json", {}))
+                    response.text = data.get("text", "")
+                    response.content = data.get("content", b"")
+                    response.raise_for_status = mocker.Mock(return_value=None)
+
+                    return response
+
+            response = mocker.Mock(status_code=404)
+            response.json = mocker.Mock(return_value={})
+            response.text = ""
+            response.content = b""
+            response.raise_for_status = mocker.Mock(return_value=None)
+
+            return response
 
         # Create the mock module
         mock_lib = mocker.Mock()
 
-        # Mock methods: requests.get, requests.post, etc.
+        # Mock get/post/put/delete/patch/head and generic request
         for method in ["get", "post", "put", "delete", "patch", "head"]:
             getattr(mock_lib, method).side_effect = (
                 lambda url, m=method, *a, **k: side_effect(m, url, *a, **k)
             )
 
+        def request_side_effect(method, url, *a, **k):
+            return side_effect(method, url, *a, **k)
+
+        mock_lib.request.side_effect = request_side_effect
+
         # Mock requests.Session() and its methods
         mock_session_instance = mocker.Mock()
+
         for method in ["get", "post", "put", "delete", "patch"]:
             getattr(mock_session_instance, method).side_effect = (
                 lambda url, m=method, *a, **k: side_effect(m, url, *a, **k)
             )
+
+        mock_session_instance.request.side_effect = request_side_effect
         mock_lib.Session.return_value = mock_session_instance
 
         # Patch the specific module that imports requests
@@ -87,3 +117,17 @@ def block_external_requests(monkeypatch):
         return original_getaddrinfo(host, *args, **kwargs)
 
     monkeypatch.setattr(socket, "getaddrinfo", assert_only_localhost)
+
+
+@pytest.fixture
+def celery_config():
+    return {
+        "broker_url": "memory://",
+        "result_backend": "django-db",
+        "task_always_eager": False,
+        "task_eager_propagates": True,
+    }
+
+
+def db(transactional_db):
+    pass

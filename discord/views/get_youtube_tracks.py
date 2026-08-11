@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Optional
 
 import sentry_sdk
@@ -5,26 +6,33 @@ import sentry_sdk
 
 from rest_framework.views import APIView
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
+from django.utils.decorators import method_decorator
+from common.auth.decorators import validate_arguments, require_token
 
 from yt_dlp import YoutubeDL
 
 
+@dataclass
+class Args:
+    url: Optional[str] = None
+    title: Optional[str] = None
+
+
 class GetYoutubeTracksView(APIView):
-    http_method_names = ["get"]
 
-    def get(self, request):
+    @method_decorator(validate_arguments(Args))
+    def get(self, request, args: Args):
 
-        url = request.GET.get("url") or None
-        title = request.GET.get("title") or None
+        url = args.url
+        title = args.title
 
-        if not url and not title:
+        if not args.url and not args.title:
             return HttpResponseBadRequest("Missing Url or Title")
 
         try:
             data = get_youtube_info(url, title)
             tracks = get_videos(data)
         except Exception as e:
-            print("here")
             sentry_sdk.capture_exception(e)
 
             return HttpResponse({"error": str(e)}, status=500)

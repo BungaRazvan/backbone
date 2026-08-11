@@ -37,7 +37,7 @@ class Bill(AutoStrMixin, models.Model):
         choices=EnergyProvider.choices,
         default=EnergyProvider.EDF,
     )
-    b_total_cost = models.DecimalField(
+    b_net_cost = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         help_text="Grand total you actually pay after subtracting SEG (£)",
