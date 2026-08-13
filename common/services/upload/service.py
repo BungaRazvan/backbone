@@ -1,5 +1,4 @@
 import os
-from dataclasses import asdict
 from typing import Dict, Type, Union, Any, Optional
 
 
@@ -34,7 +33,4 @@ class UploadService:
         upload_params = (
             UploadParameters(**params) if isinstance(params, dict) else params
         )
-        result: UploadResult = self.resolve_provider(upload_params.provider).upload(
-            upload_params
-        )
-        return asdict(result)
+        return self.resolve_provider(upload_params.provider).upload(upload_params)
