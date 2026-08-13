@@ -119,7 +119,7 @@ def block_external_requests(monkeypatch):
     monkeypatch.setattr(socket, "getaddrinfo", assert_only_localhost)
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def celery_config():
     return {
         "broker_url": "memory://",

@@ -25,6 +25,7 @@ WORKDIR /app
 # Pillow still needs the basic runtime image library to decode JPEGs
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libjpeg62-turbo \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
 
 # Pluck only the working, compiled packages from the full image stage
