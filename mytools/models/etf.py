@@ -25,8 +25,15 @@ class Etf(models.Model):
     )
     ef_pay_lag_days = models.IntegerField(default=0, blank=False, null=False)
 
-    def to_upper_unit(self, amount: int):
-        if self.ef_symbol.endswith(".L") and amount > 1:
+    def to_upper_unit(self, amount: int, currency="GBP"):
+        """Converts raw dividend data into major currency units (Pounds).
+
+        Uses the explicit currency metadata provided by the data source.
+        'GBp' (lowercase p) represents British Pence -> Needs division by 100.
+        'GBP' (uppercase) represents British Pounds -> Does NOT need division.
+        """
+
+        if currency == "GBp":
             return Decimal(amount) / Decimal(100)
 
         return Decimal(amount)

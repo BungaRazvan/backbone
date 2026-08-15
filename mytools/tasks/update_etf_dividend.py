@@ -25,12 +25,9 @@ def update_dividend(etf_id: int) -> None:
     response.raise_for_status()
 
     data = response.json()
-    events = (
-        data.get("chart", {})
-        .get("result", [{}])[0]
-        .get("events", {})
-        .get("dividends", {})
-    )
+    result = data.get("chart", {}).get("result", [{}])[0]
+    events = result.get("events", {}).get("dividends", {})
+    meta_currency = result.get("meta", {}).get("currency", "GBP")
 
     today = datetime.now(timezone.utc).date()
     ex_events = []
@@ -71,7 +68,9 @@ def update_dividend(etf_id: int) -> None:
         ee_etf=etf,
         ee_ex_date=ex_date,
         defaults={
-            "ee_pay_per_share": etf.to_upper_unit(div.get("amount", 0)),
+            "ee_pay_per_share": etf.to_upper_unit(
+                div.get("amount", 0), currency=meta_currency
+            ),
             "ee_payment_date": payment_date,
             "ee_payment_estimated": payment_estimated,
             "ee_ex_estimated": estimated,
