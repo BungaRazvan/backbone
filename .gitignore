@@ -13,3 +13,4 @@ media/*_bills
 media/cs_matches/*
 /htmlcov
 .coverage
+/bmw-mqtt-bridge

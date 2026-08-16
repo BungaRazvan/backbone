@@ -33,4 +33,4 @@ COPY --from=builder /install /usr/local
 
 COPY . .
 
-CMD ["gunicorn", "backbone.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "backbone.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--preload"]

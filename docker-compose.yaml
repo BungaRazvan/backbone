@@ -12,14 +12,6 @@ services:
       - backbone_media:/app/media
     security_opt:
       - seccomp=unconfined
-    command: >
-      sh -c "
-        python manage.py migrate &&
-        python manage.py migrate --database=discord_db &&
-        python manage.py migrate --database=extension_db &&
-        python manage.py migrate --database=mytools_db &&
-        python manage.py collectstatic --noinput &&
-        gunicorn backbone.wsgi:application --bind 0.0.0.0:8000"
     depends_on:
       - redis
     restart: unless-stopped
@@ -60,10 +52,54 @@ services:
     command: redis-server
     restart: unless-stopped
 
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: backbone_mosquitto
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1883:1883"
+    volumes:
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+
+  bmw-bridge:
+    image: ghcr.io/dj0abr/bmw-mqtt-bridge:latest
+    container_name: backbone_bmw_bridge
+    restart: unless-stopped
+    environment:
+      - XDG_STATE_HOME=/app/state
+      - LOCAL_HOST=mosquitto
+      - LOCAL_PORT=1883
+    volumes:
+      - bmw_bridge_data:/app/state
+    depends_on:
+      - mosquitto
+
+  bmw-listener:
+    image: backbone:latest
+    container_name: backbone_bmw_listener
+    volumes:
+      - backbone_db:/app/databases
+    env_file:
+      - .env.prod
+    command: python manage.py run_bmw_mqtt
+    depends_on:
+      - redis
+      - mosquitto
+      - worker
+    restart: unless-stopped
+
 volumes:
   backbone_redis_data:
     external: true
   backbone_media:
     external: true
   backbone_db:
+    external: true
+  mosquitto_data:
+    external: true
+  mosquitto_log:
+    external: true
+  bmw_bridge_data:
     external: true

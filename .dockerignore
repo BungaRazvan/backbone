@@ -16,3 +16,4 @@ celerybeat-schedule
 /staticfiles
 .git
 .idea
+/bmw-mqtt-bridge
