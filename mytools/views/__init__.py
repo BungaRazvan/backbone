@@ -4,3 +4,7 @@ from .etf.metrics import EtfsMetrics
 from .solar.solar_performance import SolarPerformanceView
 from .solar.solar_generation import SolarGenerationView
 from .bills_stats import BillsStatsView
+from .bmw_car_data.token import BMWCarDataAuthTokenView
+from .bmw_car_data.device_code import BMWCarDataAuthDeviceCodeView
+from .bmw_car_data.containers import BMWCarDataContainersView
+from .bmw_car_data.telemetry import BMWTelematicView
