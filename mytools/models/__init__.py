@@ -8,3 +8,7 @@ from .electricity import Electricity
 from .seg import Seg
 from .gas import Gas
 from .charge_point_history import ChargePointHistory
+from .vehicle import Vehicle
+from .vehicle_telemetry_log import VehicleTelemetryLog
+from .vehicle_trip import VehicleTrip
+from .bmw_car_data_event import BMWCarDataEvent

@@ -82,4 +82,5 @@ class BillsStatsView(APIView):
             .order_by("b_date")
         )
         serializer = BillStatsSerializer(data, many=True)
+
         return Response(serializer.data)
