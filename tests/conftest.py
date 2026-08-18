@@ -1,6 +1,6 @@
 import pytest
 import socket
-import pytest
+import requests
 
 from django.conf import settings
 from django.test import TestCase, TransactionTestCase
@@ -30,10 +30,7 @@ def enable_multidb_access(db, request):
 
 @pytest.fixture
 def mock_requests(mocker):
-    """
-    A global fixture to mock the 'requests' library in any module.
-    Usage: mock_requests("app_name.module_name", responses={...})
-    """
+    """Global fixture to mock 'requests' with backward compatibility and per-method support."""
 
     def _setup_mock(target_path, responses=None):
         responses = responses or {}
@@ -41,7 +38,6 @@ def mock_requests(mocker):
 
         def normalize_url(target_url):
             normalized = target_url
-
             if normalized.startswith("https://"):
                 normalized = normalized[len("https://") :]
             elif normalized.startswith("http://"):
@@ -52,54 +48,85 @@ def mock_requests(mocker):
 
             return normalized.strip("/")
 
-        def side_effect(method, url, *args, **kwargs):
-            history.append({"method": method, "url": url, "kwargs": kwargs})
-            normalized_url = normalize_url(url)
+        def create_mock_response(
+            status=200, json_data=None, text="", content=b"", url=""
+        ):
+            response = mocker.Mock(
+                status_code=status,
+                reason="OK" if status < 400 else "HTTP Error",
+                url=url or "https://api.example.com",
+            )
+            response.json = mocker.Mock(return_value=json_data or {})
+            response.text = text
+            response.content = content
 
-            for pattern, data in responses.items():
-                if normalize_url(pattern) in normalized_url:
-                    response = mocker.Mock(status_code=data.get("status", 200))
-                    response.json = mocker.Mock(return_value=data.get("json", {}))
-                    response.text = data.get("text", "")
-                    response.content = data.get("content", b"")
-                    response.raise_for_status = mocker.Mock(return_value=None)
-
-                    return response
-
-            response = mocker.Mock(status_code=404)
-            response.json = mocker.Mock(return_value={})
-            response.text = ""
-            response.content = b""
-            response.raise_for_status = mocker.Mock(return_value=None)
+            # Attach real raise_for_status so HTTP 4xx/5xx actually throw HTTPError
+            response.raise_for_status = (
+                requests.models.Response.raise_for_status.__get__(
+                    response, requests.models.Response
+                )
+            )
 
             return response
 
-        # Create the mock module
+        def side_effect(method, url, *args, **kwargs):
+            history.append({"method": method, "url": url, "kwargs": kwargs})
+            normalized_url = normalize_url(url)
+            method_upper = method.upper()
+
+            for pattern, raw_config in responses.items():
+                if normalize_url(pattern) in normalized_url:
+                    # Backward compatibility check:
+                    # If raw_config contains HTTP method keys, resolve the specific method's config.
+                    # Otherwise, treat raw_config as the global response dict for all methods.
+                    if any(
+                        m in raw_config
+                        for m in ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"]
+                    ):
+                        data = raw_config.get(method_upper)
+                        if data is None:
+                            continue  # Method not matched for this pattern
+                    else:
+                        data = raw_config
+
+                    # Support raising direct network/connection exceptions
+                    if "exception" in data:
+                        raise data["exception"]
+
+                    return create_mock_response(
+                        status=data.get("status", 200),
+                        json_data=data.get("json", {}),
+                        text=data.get("text", ""),
+                        content=data.get("content", b""),
+                        url=url,
+                    )
+
+            return create_mock_response(status=404, url=url)
+
         mock_lib = mocker.Mock()
+        methods = ["get", "post", "put", "delete", "patch", "head"]
 
-        # Mock get/post/put/delete/patch/head and generic request
-        for method in ["get", "post", "put", "delete", "patch", "head"]:
-            getattr(mock_lib, method).side_effect = (
-                lambda url, m=method, *a, **k: side_effect(m, url, *a, **k)
-            )
+        def make_handler(m):
+            return lambda url, *args, **kwargs: side_effect(m, url, *args, **kwargs)
 
-        def request_side_effect(method, url, *a, **k):
-            return side_effect(method, url, *a, **k)
+        for m in methods:
+            getattr(mock_lib, m).side_effect = make_handler(m)
 
-        mock_lib.request.side_effect = request_side_effect
+        mock_lib.request.side_effect = lambda method, url, *args, **kwargs: side_effect(
+            method, url, *args, **kwargs
+        )
 
-        # Mock requests.Session() and its methods
         mock_session_instance = mocker.Mock()
+        for m in methods:
+            getattr(mock_session_instance, m).side_effect = make_handler(m)
 
-        for method in ["get", "post", "put", "delete", "patch"]:
-            getattr(mock_session_instance, method).side_effect = (
-                lambda url, m=method, *a, **k: side_effect(m, url, *a, **k)
+        mock_session_instance.request.side_effect = (
+            lambda method, url, *args, **kwargs: side_effect(
+                method, url, *args, **kwargs
             )
-
-        mock_session_instance.request.side_effect = request_side_effect
+        )
         mock_lib.Session.return_value = mock_session_instance
 
-        # Patch the specific module that imports requests
         mocker.patch(f"{target_path}.requests", mock_lib)
 
         return history

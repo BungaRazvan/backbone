@@ -3,3 +3,7 @@ from .etfs_events_list import EfsEventsListView
 from .etfs_dashboard import EtfsDashboard
 from .solar_stats import SolarStatsView
 from .bills_stats import BillsStatsView
+from .bmw_car_data.token import BMWCarDataAuthTokenView
+from .bmw_car_data.device_code import BMWCarDataAuthDeviceCodeView
+from .bmw_car_data.containers import BMWCarDataContainersView
+from .bmw_car_data.telemetry import BMWTelematicView

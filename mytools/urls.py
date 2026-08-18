@@ -5,6 +5,10 @@ from .views import (
     EtfsDashboard,
     SolarStatsView,
     BillsStatsView,
+    BMWCarDataAuthDeviceCodeView,
+    BMWCarDataAuthTokenView,
+    BMWCarDataContainersView,
+    BMWTelematicView,
 )
 
 urlpatterns = [
@@ -13,4 +17,8 @@ urlpatterns = [
     path("etfs-dashboard", EtfsDashboard.as_view()),
     path("solar-stats", SolarStatsView.as_view()),
     path("bills-stats", BillsStatsView.as_view()),
+    path("bmw/cardata/auth-device", BMWCarDataAuthDeviceCodeView.as_view()),
+    path("bmw/cardata/auth-token", BMWCarDataAuthTokenView.as_view()),
+    path("bmw/cardata/containers", BMWCarDataContainersView.as_view()),
+    path("bmw/cardata/telematics", BMWTelematicView.as_view()),
 ]
