@@ -41,7 +41,7 @@ class EtfsDashboardSerializer(serializers.Serializer):
         return round(roi, 2)
 
 
-class EtfsDashboard(APIView):
+class EtfsMetrics(APIView):
 
     @method_decorator(require_token(app_name=("mytools")))
     def get(self, request):
