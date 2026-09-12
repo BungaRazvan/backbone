@@ -55,7 +55,7 @@ class Args:
     statsPeriod: Optional[int] = None
 
 
-class SolarStatsView(APIView):
+class SolarPerformanceView(APIView):
 
     @method_decorator([require_token(app_name="mytools"), validate_arguments(Args)])
     def get(self, request, args: Args):
