@@ -3,8 +3,8 @@ from rest_framework.views import APIView
 from django.http.response import JsonResponse
 from django.utils.decorators import method_decorator
 from django.db.models import Q
-
-from common.auth.decorators import require_token
+import dataclasses
+from common.auth.decorators import require_token, validate_arguments
 from mytools.models import Etf, EtfEvent
 from rest_framework import serializers
 
@@ -30,16 +30,24 @@ class EventSerializer(serializers.ModelSerializer):
         ]
 
 
+@dataclasses.dataclass
+class Args:
+    start_date: datetime
+    end_date: datetime
+
+
 class EfsEventsListView(APIView):
 
-    @method_decorator(require_token(app_name=("mytools")))
-    def get(self, request):
-
-        today = datetime.now(timezone.utc).now().date()
+    @method_decorator([require_token(app_name=("mytools")), validate_arguments(Args)])
+    def get(
+        self,
+        request,
+        args: Args,
+    ):
 
         events = (
             EtfEvent.objects.filter(
-                Q(ee_ex_date__year=today.year) | Q(ee_payment_date__year=today.year)
+                Q(ee_ex_date__gte=args.start_date) & Q(ee_ex_date__lte=args.end_date)
             )
             .select_related("ee_etf")
             .order_by("ee_ex_date", "ee_payment_date")
