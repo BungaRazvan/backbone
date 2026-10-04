@@ -2,7 +2,7 @@ from typing import Optional
 
 from celery import shared_task
 
-from mytools.models import Electricity, Seg, InverterDataPoint
+from mytools.models import ElectricityBill, SegBill, InverterDataPoint
 from datetime import date, timedelta
 
 

@@ -4,8 +4,10 @@ from .etf_event import EtfEvent
 from .inverter_data_point import InverterDataPoint
 from .tarif_period import TariffPeriod
 from .bill import Bill
-from .electricity import Electricity
-from .seg import Seg
-from .gas import Gas
+from .electricity_bill import ElectricityBill
+from .seg_bill import SegBill
+from .gas_bill import Gas
 from .charge_point_history import ChargePointHistory
 from .billing_cycle import BillingCycle
+
+# from .annual_energy_summary import AnnualEnergySummary

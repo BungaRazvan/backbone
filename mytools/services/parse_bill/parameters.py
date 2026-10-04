@@ -7,7 +7,7 @@ import datetime
 
 from typing import Union, Optional
 
-from mytools.models import Seg, Electricity, Gas
+from mytools.models import SegBill, ElectricityBill, Gas
 
 
 class UtilityCategory(str, enum.Enum):
@@ -38,14 +38,14 @@ class BillSection:
 
     def model_mappings(self):
         mappings = {
-            UtilityCategory.SEG: (Seg, "s_"),
-            UtilityCategory.ELECTRICITY: (Electricity, "e_"),
+            UtilityCategory.SEG: (SegBill, "s_"),
+            UtilityCategory.ELECTRICITY: (ElectricityBill, "e_"),
             UtilityCategory.GAS: (Gas, "g_"),
         }
 
         return mappings.get(self.category.value)
 
-    def to_model(self) -> Optional[Union[Electricity, Gas, Seg]]:
+    def to_model(self) -> Optional[Union[ElectricityBill, Gas, SegBill]]:
         model_class, prefix = self.model_mappings()
 
         if prefix is None:

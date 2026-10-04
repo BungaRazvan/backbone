@@ -2,7 +2,7 @@ import pytest
 from datetime import date
 from decimal import Decimal
 
-from mytools.models import Bill, Electricity, Gas, Seg
+from mytools.models import Bill, ElectricityBill, Gas, SegBill
 
 
 class TestBillsStatsView:
@@ -11,7 +11,7 @@ class TestBillsStatsView:
     def test_returns_monthly_costs_and_usage(self, client, db):
         bill = Bill.objects.create(b_date=date(2026, 6, 15), b_provider="EDF")
 
-        Electricity.objects.create(
+        ElectricityBill.objects.create(
             e_bill=bill,
             e_from_date=date(2026, 5, 15),
             e_to_date=date(2026, 6, 15),
@@ -35,7 +35,7 @@ class TestBillsStatsView:
             g_total_cost=Decimal("20.75"),
         )
 
-        Seg.objects.create(
+        SegBill.objects.create(
             s_bill=bill,
             s_from_date=date(2026, 5, 15),
             s_to_date=date(2026, 6, 15),

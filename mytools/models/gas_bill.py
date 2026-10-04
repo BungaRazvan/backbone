@@ -6,7 +6,7 @@ from common.mixins import AutoStrMixin
 class Gas(AutoStrMixin, models.Model):
     class Meta:
         app_label = "mytools"
-        db_table = "gas"
+        db_table = "gas_bill"
 
     g_bill = models.ForeignKey("Bill", on_delete=models.CASCADE, related_name="gas")
 

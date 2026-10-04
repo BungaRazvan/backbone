@@ -3,10 +3,10 @@ from django.db import models
 from common.mixins import AutoStrMixin
 
 
-class Electricity(AutoStrMixin, models.Model):
+class ElectricityBill(AutoStrMixin, models.Model):
     class Meta:
         app_label = "mytools"
-        db_table = "electricity"
+        db_table = "electricity_bills"
 
     e_bill = models.ForeignKey(
         "Bill",

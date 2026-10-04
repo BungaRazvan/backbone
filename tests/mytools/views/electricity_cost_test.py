@@ -3,14 +3,14 @@ from datetime import date
 from freezegun import freeze_time
 import pytest
 from decimal import Decimal
-from mytools.models import Bill, Electricity, Seg, BillingCycle, Gas
+from mytools.models import Bill, ElectricityBill, SegBill, BillingCycle, Gas
 
 
 @pytest.fixture
 def setup_test_data(db):
     bill = Bill.objects.create(b_date=date(2026, 6, 15), b_provider="EDF")
 
-    Electricity.objects.create(
+    ElectricityBill.objects.create(
         e_bill=bill,
         e_from_date=date(2026, 5, 15),
         e_to_date=date(2026, 6, 15),
@@ -22,7 +22,7 @@ def setup_test_data(db):
         e_standing_charge_total=Decimal("1.50"),
     )
 
-    Seg.objects.create(
+    SegBill.objects.create(
         s_bill=bill,
         s_from_date=date(2026, 5, 15),
         s_to_date=date(2026, 6, 15),
@@ -76,7 +76,7 @@ class TestElectricityCostView:
                 "15.33",
             ),
         ):
-            Electricity.objects.create(
+            ElectricityBill.objects.create(
                 e_bill=bill,
                 e_from_date=from_date,
                 e_to_date=to_date,
@@ -150,7 +150,7 @@ class TestElectricityCostView:
 
             bill = Bill.objects.create(b_date=date(2026, 6, 15), b_provider="EDF")
 
-            Electricity.objects.create(
+            ElectricityBill.objects.create(
                 e_bill=bill,
                 e_from_date=date(2026, 5, 15),
                 e_to_date=date(2026, 6, 15),
@@ -186,7 +186,7 @@ class TestElectricityCostView:
                     end_date=date(2026, 5, 31),
                 )
 
-                Seg.objects.create(
+                SegBill.objects.create(
                     s_bill=Bill.objects.create(
                         b_date=date(2026, 6, 15), b_provider="EDF"
                     ),
