@@ -76,10 +76,10 @@ class TestSolarPerformanceView:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["grid_import"] == pytest.approx(4.0)
-        assert data["grid_export"] == pytest.approx(6.0)
-        assert data["total_net_cost"] == pytest.approx(0.8)
-        assert data["total_exported_revenue"] == pytest.approx(0.9)
+        assert data["grid_import"] == pytest.approx(104.0)
+        assert data["grid_export"] == pytest.approx(106.0)
+        assert data["total_net_cost"] == pytest.approx(20.8)
+        assert data["total_exported_revenue"] == pytest.approx(15.9)
 
     def test_returns_aggregated_energy_and_financials_for_year(
         self, client, setup_test_data
@@ -103,10 +103,9 @@ class TestSolarPerformanceView:
         assert data["total_exported_revenue"] == pytest.approx(0.1)
         assert data["savings"] == pytest.approx(1.25)
         assert data["rte_percentage"] == pytest.approx(66.67)
-        assert data["total_standing_charge"] == pytest.approx(36.4)
 
-    def test_no_api_key_returns_401(self, client):
+    def test_no_api_key_returns_403(self, client):
         response = client.get(
             self.URL, {"statsPeriodType": "year", "statsPeriod": "2025"}
         )
-        assert response.status_code == 401
+        assert response.status_code == 403

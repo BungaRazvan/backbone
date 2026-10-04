@@ -54,6 +54,6 @@ class TestSolarGenerationView:
         assert data[1]["generated_energy"] == 15.0
         assert data[1]["consumed_energy"] == 12.0
 
-    def test_no_api_key_returns_401(self, client):
+    def test_no_api_key_returns_403(self, client):
         response = client.get(self.URL, {"statsYear": "2025"})
-        assert response.status_code == 401
+        assert response.status_code == 403

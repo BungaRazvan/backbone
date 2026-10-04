@@ -6,9 +6,9 @@ from mytools.models import Bill, Electricity, Gas, Seg
 
 
 class TestBillsStatsView:
-    URL = "/mytools/bills-stats"
+    URL = "/mytools/bills/stats"
 
-    def test_returns_monthly_costs_and_usage(self, client):
+    def test_returns_monthly_costs_and_usage(self, client, db):
         bill = Bill.objects.create(b_date=date(2026, 6, 15), b_provider="EDF")
 
         Electricity.objects.create(

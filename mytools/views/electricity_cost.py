@@ -6,7 +6,8 @@ from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from common.auth.decorators import require_token, validate_arguments
+from common.auth.backends import app_auth
+from common.auth.decorators import validate_arguments
 from mytools.models import (
     Electricity,
     BillingCycle,
@@ -40,7 +41,9 @@ class Args:
 
 class ElectricityCostView(APIView):
 
-    @method_decorator([require_token(app_name="mytools"), validate_arguments(Args)])
+    authentication_classes = [app_auth("mytools")]
+
+    @method_decorator(validate_arguments(Args))
     def get(self, request, args):
         year = datetime.datetime.now().year
         month = args.statsPeriod
@@ -66,10 +69,12 @@ class ElectricityCostView(APIView):
             year, month, billing_cycle.cycle_day
         )
         electrict_bills = Electricity.objects.filter(
-            e_from_date=start_date, e_to_date__lte=end_date
+            e_from_date__gte=start_date, e_to_date__lte=end_date
         )
 
-        seg_bills = Seg.objects.filter(s_from_date=start_date, s_to_date__lte=end_date)
+        seg_bills = Seg.objects.filter(
+            s_from_date__gte=start_date, s_to_date__lte=end_date
+        )
 
         if not electrict_bills.exists():
             return Response(
@@ -110,7 +115,7 @@ class ElectricityCostView(APIView):
 
         for electric_bill in electrict_bills:
             data["grid_import"] += electric_bill.e_kwh_used
-            data["total_net_cost"] += electric_bill.e_total_cost
+            data["total_net_cost"] += electric_bill.pure_energy_cost
 
         for seg_bill in seg_bills:
             data["grid_export"] += seg_bill.s_kwh_used
@@ -119,7 +124,6 @@ class ElectricityCostView(APIView):
         data["savings"] = (
             energy_stats_queryset["total_gross_cost"] - data["total_net_cost"]
         )
-        print(data)
         serializer = ElectricitySerializer(data)
 
         return Response(serializer.data)

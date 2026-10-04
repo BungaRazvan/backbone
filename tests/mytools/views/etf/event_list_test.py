@@ -26,3 +26,15 @@ class TestEtfEventListView:
         assert data[0]["ee_payment_estimated"] is False
         assert data[1]["ee_ex_estimated"] is False
         assert data[1]["ee_payment_estimated"] is False
+
+    def test_filters_etf_events_by_date_bounds(self, client, setup_test_data):
+        response = client.get(
+            self.URL,
+            {"start_date": "2025-02-01", "end_date": "2025-04-15"},
+            HTTP_X_API_KEY="test-token",
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["ee_ex_date"] == "2025-04-15"

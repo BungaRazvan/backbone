@@ -1,6 +1,6 @@
 from django.urls import path
 
-from mytools.views.electric_bill import ElectricityCostView
+from mytools.views.electricity_cost import ElectricityCostView
 from mytools.views.solar.solar_performance import SolarPerformanceView
 from .views import (
     EfsListView,
@@ -18,5 +18,5 @@ urlpatterns = [
     path("solar/performance", SolarPerformanceView.as_view()),
     path("solar/generation", SolarGenerationView.as_view()),
     path("bills/stats", BillsStatsView.as_view()),
-    path("bills/electricity", ElectricityCostView.as_view()),
+    path("bills/electricity_costs", ElectricityCostView.as_view()),
 ]

@@ -45,3 +45,9 @@ class Electricity(AutoStrMixin, models.Model):
         blank=True,
         null=True,
     )
+
+    @property
+    def pure_energy_cost(self):
+        """Calculate the pure energy cost without standing charges."""
+
+        return self.e_subtotal_before_vat - (self.e_standing_charge_total or 0)
