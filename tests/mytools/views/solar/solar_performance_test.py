@@ -2,7 +2,8 @@ import pytest
 from datetime import date
 from decimal import Decimal
 
-from mytools.models import InverterDataPoint, TariffPeriod
+from mytools.models import BillingCycle, InverterDataPoint, TariffPeriod
+from mytools.services.parse_bill.parameters import UtilityCategory
 
 
 @pytest.fixture
@@ -12,7 +13,7 @@ def setup_test_data(db):
         tp_tariff_name="Test Tariff",
         tp_start_date=date(2025, 1, 1),
         tp_end_date=date(2025, 12, 31),
-        tp_standard_import_rate=Decimal("0.15"),
+        tp_standard_import_rate=Decimal("0.20756"),
         tp_standard_export_rate=Decimal("0.05"),
         tp_standing_charge_rate=Decimal("0.10"),
         tp_has_variable_rates=False,
@@ -32,6 +33,54 @@ def setup_test_data(db):
 class TestSolarPerformanceView:
     URL = "/mytools/solar/performance"
 
+    def test_monthly_billing_cycle_excludes_end_date(self, client, setup_test_data):
+        year = date.today().year
+        BillingCycle.objects.create(
+            start_date=date(year, 1, 1),
+            end_date=None,
+            cycle_day=26,
+            type="monthly",
+            category=UtilityCategory.ELECTRICITY.value,
+        )
+        TariffPeriod.objects.create(
+            tp_provider_name="EDF",
+            tp_tariff_name="Current Test Tariff",
+            tp_start_date=date(year, 1, 1),
+            tp_end_date=date(year, 12, 31),
+            tp_standard_import_rate=Decimal("0.2000"),
+            tp_standard_export_rate=Decimal("0.1500"),
+            tp_standing_charge_rate=Decimal("0.1000"),
+            tp_has_variable_rates=False,
+        )
+
+        for point_date, grid_import, grid_export in (
+            (date(year, 6, 26), 1.0, 2.0),
+            (date(year, 7, 25), 3.0, 4.0),
+            (date(year, 7, 26), 100.0, 100.0),
+        ):
+            InverterDataPoint.objects.create(
+                idp_date=point_date,
+                idp_solar_generation_kwh=0.0,
+                idp_grid_export_kwh=grid_export,
+                idp_grid_import_kwh=grid_import,
+                idp_home_consumption_kwh=0.0,
+                idp_battery_charge_kwh=0.0,
+                idp_battery_discharge_kwh=0.0,
+            )
+
+        response = client.get(
+            self.URL,
+            {"statsPeriodType": "month", "statsPeriod": "7"},
+            HTTP_X_API_KEY="test-token",
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["grid_import"] == pytest.approx(4.0)
+        assert data["grid_export"] == pytest.approx(6.0)
+        assert data["total_net_cost"] == pytest.approx(0.8)
+        assert data["total_exported_revenue"] == pytest.approx(0.9)
+
     def test_returns_aggregated_energy_and_financials_for_year(
         self, client, setup_test_data
     ):
@@ -49,10 +98,10 @@ class TestSolarPerformanceView:
         assert data["home_consumption"] == 10.0
         assert data["grid_import"] == 4.0
         assert data["grid_export"] == 2.0
-        assert data["total_gross_cost"] == pytest.approx(1.5)
-        assert data["total_net_cost"] == pytest.approx(0.6)
+        assert data["total_gross_cost"] == pytest.approx(2.0756)
+        assert data["total_net_cost"] == pytest.approx(0.83024)
         assert data["total_exported_revenue"] == pytest.approx(0.1)
-        assert data["savings"] == pytest.approx(0.9)
+        assert data["savings"] == pytest.approx(1.25)
         assert data["rte_percentage"] == pytest.approx(66.67)
         assert data["total_standing_charge"] == pytest.approx(36.4)
 

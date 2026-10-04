@@ -127,13 +127,18 @@ class EfsListView(APIView):
             to_attr="dividents",
         )
 
+        shares = Prefetch(
+            "shares",
+            queryset=EtfShare.objects.all().order_by("-efs_purchase_date"),
+        )
+
         etfs = (
             Etf.objects.all()
             .prefetch_related(
                 future_events,
                 recent_events,
                 dividents,
-                "shares",
+                shares,
             )
             .annotate(
                 total_spent=Sum("shares__efs_total_price"),

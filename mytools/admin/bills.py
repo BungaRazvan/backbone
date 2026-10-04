@@ -7,13 +7,12 @@ from django.forms.models import model_to_dict
 from mytools.services.parse_bill import BillParseService
 from mytools.services.parse_bill.parameters import BillParseParameters
 
-from mytools.models import (
-    TariffPeriod,
-    Bill,
-    Gas,
-    Seg,
-    Electricity,
-)
+from mytools.models import TariffPeriod, Bill, Gas, Seg, Electricity, BillingCycle
+
+
+@admin.register(BillingCycle)
+class BillingCycleAdmin(admin.ModelAdmin):
+    pass
 
 
 @admin.register(TariffPeriod)

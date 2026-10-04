@@ -47,7 +47,9 @@ def fetch_inverter_history_by_month(
 
     api_response = FoxCloud().call_fox_api("/op/v0/device/report/query", payload)
     result_payload = api_response.get("result", None)
-
+    print(
+        f"Fetched data for {target_year}-{target_month:02d}: {json.dumps(result_payload)}"
+    )
     if not result_payload:
         print(f"No data returned for {target_year}-{target_month:02d}")
         return
