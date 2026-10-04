@@ -1,9 +1,11 @@
-from datetime import timezone, datetime
+import dataclasses
+from datetime import datetime, timezone
+from typing import Optional
+
 from rest_framework.views import APIView
 from django.http.response import JsonResponse
 from django.utils.decorators import method_decorator
-from django.db.models import Q
-import dataclasses
+
 from common.auth.decorators import require_token, validate_arguments
 from mytools.models import Etf, EtfEvent
 from rest_framework import serializers
@@ -32,8 +34,8 @@ class EventSerializer(serializers.ModelSerializer):
 
 @dataclasses.dataclass
 class Args:
-    start_date: datetime
-    end_date: datetime
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
 
 
 class EfsEventsListView(APIView):
@@ -45,12 +47,14 @@ class EfsEventsListView(APIView):
         args: Args,
     ):
 
-        events = (
-            EtfEvent.objects.filter(
-                Q(ee_ex_date__gte=args.start_date) & Q(ee_ex_date__lte=args.end_date)
-            )
-            .select_related("ee_etf")
-            .order_by("ee_ex_date", "ee_payment_date")
+        events = EtfEvent.objects.all()
+        if args.start_date is not None:
+            events = events.filter(ee_ex_date__gte=args.start_date)
+        if args.end_date is not None:
+            events = events.filter(ee_ex_date__lte=args.end_date)
+
+        events = events.select_related("ee_etf").order_by(
+            "ee_ex_date", "ee_payment_date"
         )
 
         data = EventSerializer(events, many=True).data

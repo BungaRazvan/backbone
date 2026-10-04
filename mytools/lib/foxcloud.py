@@ -40,7 +40,16 @@ class FoxCloud:
         Enforces the mandatory leading slash required by the FoxESS authentication engine.
         """
 
-        url = self.domain + path
-        response = requests.post(url, headers=self.get_headers(path), json=payload)
+        url = f"{self.domain.rstrip('/')}/{path.lstrip('/')}"
+        headers = self.get_headers(path)
+
+        response = requests.post(url, headers=headers, json=payload)
         response.raise_for_status()
-        return response.json()
+        api_response = response.json()
+
+        if api_response.get("errno", 0) != 0:
+            raise RuntimeError(
+                f"FoxESS API error {api_response['errno']}: {api_response.get('msg', '')}"
+            )
+
+        return api_response

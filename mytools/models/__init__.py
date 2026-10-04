@@ -8,3 +8,4 @@ from .electricity import Electricity
 from .seg import Seg
 from .gas import Gas
 from .charge_point_history import ChargePointHistory
+from .billing_cycle import BillingCycle

@@ -11,8 +11,8 @@ from django.db.models import (
     F,
     FloatField,
     ExpressionWrapper,
-    DurationField,
     DecimalField,
+    Q,
 )
 from django.db.models.functions import Coalesce, Round
 
@@ -21,9 +21,22 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from common.auth.decorators import require_token, validate_arguments
-from mytools.models import InverterDataPoint, TariffPeriod
+from mytools.models import InverterDataPoint, TariffPeriod, BillingCycle
+from mytools.services.parse_bill.parameters import UtilityCategory
 
-MICROSECONDS_IN_A_DAY = 86400000000
+
+def get_month_range_for_billing_cycle(year: int, month: int, cycle_day: int):
+    start_year = year
+    start_month = month - 1
+
+    if start_month == 0:
+        start_year -= 1
+        start_month = 12
+
+    return (
+        datetime.date(start_year, start_month, cycle_day),
+        datetime.date(year, month, cycle_day),
+    )
 
 
 class SolarStatsSerializer(serializers.Serializer):
@@ -34,7 +47,6 @@ class SolarStatsSerializer(serializers.Serializer):
     grid_export = serializers.FloatField()
     total_gross_cost = serializers.FloatField()
     total_exported_revenue = serializers.FloatField()
-    total_standing_charge = serializers.FloatField()
     total_net_cost = serializers.FloatField()
     savings = serializers.FloatField()
     rte_percentage = serializers.SerializerMethodField()
@@ -64,14 +76,31 @@ class SolarPerformanceView(APIView):
         energy_stats_queryset = InverterDataPoint.objects.all()
 
         if args.statsPeriodType == "month" and args.statsPeriod:
-            totals = totals.filter(
-                idp_date__month=args.statsPeriod,
-                idp_date__year=datetime.date.today().year,
+            billing_cycle = (
+                BillingCycle.objects.covering_year(
+                    datetime.date.today().year,
+                    cycle_type="monthly",
+                    category=UtilityCategory.ELECTRICITY.value,
+                )
+                .order_by("-end_date")
+                .first()
             )
-            energy_stats_queryset = energy_stats_queryset.filter(
-                idp_date__month=args.statsPeriod,
-                idp_date__year=datetime.date.today().year,
-            )
+
+            filters = Q(idp_date__year=datetime.date.today().year)
+
+            if billing_cycle:
+                start_date, end_date = get_month_range_for_billing_cycle(
+                    datetime.date.today().year,
+                    args.statsPeriod,
+                    billing_cycle.cycle_day,
+                )
+
+                filters = Q(idp_date__gte=start_date, idp_date__lte=end_date)
+            else:
+                filters &= Q(idp_date__month=args.statsPeriod)
+
+            totals = totals.filter(filters)
+            energy_stats_queryset = energy_stats_queryset.filter(filters)
         elif args.statsPeriodType == "year" and args.statsPeriod:
             totals = totals.filter(idp_date__year=args.statsPeriod)
             energy_stats_queryset = energy_stats_queryset.filter(
@@ -79,11 +108,13 @@ class SolarPerformanceView(APIView):
             )
 
         totals = totals.aggregate(
-            battery_charge=Sum("idp_battery_charge_kwh"),
-            battery_discharge=Sum("idp_battery_discharge_kwh"),
-            home_consumption=Sum("idp_home_consumption_kwh"),
-            grid_import=Sum("idp_grid_import_kwh"),
-            grid_export=Sum("idp_grid_export_kwh"),
+            battery_charge=Sum("idp_battery_charge_kwh", output_field=FloatField()),
+            battery_discharge=Sum(
+                "idp_battery_discharge_kwh", output_field=FloatField()
+            ),
+            home_consumption=Sum("idp_home_consumption_kwh", output_field=FloatField()),
+            grid_import=Sum("idp_grid_import_kwh", output_field=DecimalField()),
+            grid_export=Sum("idp_grid_export_kwh", output_field=DecimalField()),
         )
 
         tariff_subquery = TariffPeriod.objects.filter(
@@ -100,65 +131,52 @@ class SolarPerformanceView(APIView):
         ).values("tp_standard_export_rate")[:1]
 
         energy_stats_queryset = energy_stats_queryset.annotate(
-            raw_import_rate=Subquery(tariff_import_subquery, output_field=FloatField()),
-            raw_export_rate=Subquery(tariff_export_subquery, output_field=FloatField()),
+            raw_import_rate=Subquery(
+                tariff_import_subquery, output_field=DecimalField()
+            ),
+            raw_export_rate=Subquery(
+                tariff_export_subquery, output_field=DecimalField()
+            ),
         ).annotate(
-            import_rate=Coalesce(F("raw_import_rate"), 0.24, output_field=FloatField()),
-            export_rate=Coalesce(F("raw_export_rate"), 0.0, output_field=FloatField()),
+            import_rate=Coalesce(
+                F("raw_import_rate"), 0.24, output_field=DecimalField()
+            ),
+            export_rate=Coalesce(
+                F("raw_export_rate"), 0.0, output_field=DecimalField()
+            ),
         )
 
         calculated_queryset = energy_stats_queryset.annotate(
             gross_cost=ExpressionWrapper(
                 F("idp_home_consumption_kwh") * F("import_rate"),
-                output_field=FloatField(),
+                output_field=DecimalField(),
             ),
             net_cost=ExpressionWrapper(
-                F("idp_grid_import_kwh") * F("import_rate"), output_field=FloatField()
+                F("idp_grid_import_kwh") * F("import_rate"), output_field=DecimalField()
             ),
             exported_revenue=ExpressionWrapper(
-                F("idp_grid_export_kwh") * F("export_rate"), output_field=FloatField()
+                F("idp_grid_export_kwh") * F("export_rate"), output_field=DecimalField()
             ),
         ).annotate(
             total_savings_gbp=ExpressionWrapper(
-                F("gross_cost") - F("net_cost"), output_field=FloatField()
+                F("gross_cost") - F("net_cost"), output_field=DecimalField()
             )
         )
 
         energy_stats = calculated_queryset.aggregate(
             total_gross_cost=Coalesce(
-                Sum("gross_cost"), 0.0, output_field=FloatField()
+                Sum("gross_cost"), 0.0, output_field=DecimalField()
             ),
             total_exported_revenue=Coalesce(
-                Sum("exported_revenue"), 0.0, output_field=FloatField()
+                Sum("exported_revenue"), 0.0, output_field=DecimalField()
             ),
-            total_net_cost=Coalesce(Sum("net_cost"), 0.0, output_field=FloatField()),
+            total_net_cost=Coalesce(Sum("net_cost"), 0.0, output_field=DecimalField()),
             savings=Coalesce(
-                Round(Sum("total_savings_gbp"), 2), 0.0, output_field=FloatField()
+                Round(Sum("total_savings_gbp"), 2), 0.0, output_field=DecimalField()
             ),
         )
 
-        end_date_or_today = Coalesce(F("tp_end_date"), datetime.date.today())
-
-        duration_expr = ExpressionWrapper(
-            end_date_or_today - F("tp_start_date"), output_field=DurationField()
-        )
-
-        standing_rates = (
-            TariffPeriod.objects.filter(
-                tp_standing_charge_rate__gt=0, tp_start_date__lte=datetime.date.today()
-            )
-            .annotate(duration_ms=duration_expr)
-            .annotate(
-                days=ExpressionWrapper(
-                    F("duration_ms") / MICROSECONDS_IN_A_DAY,
-                    output_field=DecimalField(),
-                )
-            )
-            .annotate(standing_charge=F("days") * F("tp_standing_charge_rate"))
-            .aggregate(total_standing_charge=Sum("standing_charge"))
-        )
-
-        combined_data = {**totals, **energy_stats, **standing_rates}
+        combined_data = {**totals, **energy_stats}
         serializer = SolarStatsSerializer(combined_data)
 
         return Response(serializer.data)

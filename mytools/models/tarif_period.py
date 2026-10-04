@@ -26,7 +26,7 @@ class TariffPeriod(AutoStrMixin, models.Model):
 
     # Base rates (if you have flat pricing)
     tp_standard_import_rate = models.DecimalField(
-        max_digits=6, decimal_places=4, help_text="Cost per kWh imported"
+        max_digits=7, decimal_places=5, help_text="Cost per kWh imported"
     )
     tp_standard_export_rate = models.DecimalField(
         help_text="Payment per kWh exported", max_digits=6, decimal_places=4

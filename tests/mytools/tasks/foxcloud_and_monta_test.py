@@ -1,9 +1,12 @@
+import hashlib
+
 import pytest
 from datetime import datetime
 from decimal import Decimal
 
 from freezegun import freeze_time
 
+from mytools.lib.foxcloud import FoxCloud
 from mytools.tasks.foxcloud.fetch import fetch_inverter_history_by_month
 from mytools.tasks.monta.pull_completed_charges import pull_completed_charges
 from mytools.tasks.monta.calculate_unprocessed_charge_metrics import (
@@ -19,6 +22,44 @@ def celery_includes():
         "mytools.tasks.monta.pull_completed_charges",
         "mytools.tasks.monta.calculate_unprocessed_charge_metrics",
     ]
+
+
+@freeze_time("2026-10-02 20:03:59")
+def test_foxcloud_signature_uses_crlf_separators():
+    fox_cloud = FoxCloud()
+    path = "/op/v0/device/report/query"
+
+    signature, timestamp = fox_cloud.get_signature(path)
+    expected = hashlib.md5(
+        f"{path}\r\n{fox_cloud.token}\r\n{timestamp}".encode("UTF-8")
+    ).hexdigest()
+
+    assert signature == expected
+
+
+def test_call_fox_api_raises_on_api_error(monkeypatch):
+    class ApiErrorResponse:
+        status_code = 200
+        headers = {}
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"errno": 40256, "msg": "illegal signature"}
+
+    requested_urls = []
+
+    def mock_post(url, **kwargs):
+        requested_urls.append(url)
+        return ApiErrorResponse()
+
+    monkeypatch.setattr("mytools.lib.foxcloud.requests.post", mock_post)
+
+    with pytest.raises(RuntimeError, match="FoxESS API error 40256"):
+        FoxCloud().call_fox_api("/op/v0/device/list", {})
+
+    assert requested_urls == ["https://www.foxesscloud.com/op/v0/device/list"]
 
 
 def test_fetch_inverter_history_by_month_handles_foxcloud_api_response(
