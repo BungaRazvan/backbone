@@ -9,5 +9,4 @@ from .seg_bill import SegBill
 from .gas_bill import Gas
 from .charge_point_history import ChargePointHistory
 from .billing_cycle import BillingCycle
-
-# from .annual_energy_summary import AnnualEnergySummary
+from .annual_energy_summary import AnnualEnergySummary
