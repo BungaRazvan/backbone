@@ -7,7 +7,7 @@ from celery import shared_task
 from django.conf import settings
 from django.forms.models import model_to_dict
 
-from mytools.models import Bill, Seg
+from mytools.models import Bill, SegBill
 from mytools.services.parse_bill import BillParseService
 from mytools.services.parse_bill.parameters import BillParseParameters
 
@@ -52,7 +52,7 @@ def process_bills(provider: str):
 
             net_cost += Decimal(result.total_cost)
 
-            if not isinstance(model, Seg):
+            if not isinstance(model, SegBill):
                 gross_cost += Decimal(result.total_cost)
 
         bill.b_gross_cost = gross_cost

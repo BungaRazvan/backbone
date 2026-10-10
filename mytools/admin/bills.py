@@ -7,7 +7,14 @@ from django.forms.models import model_to_dict
 from mytools.services.parse_bill import BillParseService
 from mytools.services.parse_bill.parameters import BillParseParameters
 
-from mytools.models import TariffPeriod, Bill, Gas, Seg, Electricity, BillingCycle
+from mytools.models import (
+    TariffPeriod,
+    Bill,
+    Gas,
+    SegBill,
+    ElectricityBill,
+    BillingCycle,
+)
 
 
 @admin.register(BillingCycle)
@@ -21,7 +28,7 @@ class TariffPeriodAdmin(admin.ModelAdmin):
 
 
 class ElectricityInline(admin.StackedInline):
-    model = Electricity
+    model = ElectricityBill
     can_delete = False
     extra = 0
 
@@ -33,7 +40,7 @@ class GasInline(admin.StackedInline):
 
 
 class SegInline(admin.StackedInline):
-    model = Seg
+    model = SegBill
     can_delete = False
     extra = 0
 
@@ -75,7 +82,7 @@ class BillAdmin(admin.ModelAdmin):
 
                 net_cost += Decimal(result.total_cost)
 
-                if not isinstance(model, Seg):
+                if not isinstance(model, SegBill):
                     gross_cost += Decimal(result.total_cost)
 
             file_path = obj.b_file.path

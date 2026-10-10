@@ -15,6 +15,10 @@ class BillingCycleQuerySet(models.QuerySet):
 
 
 class BillingCycle(AutoStrMixin, models.Model):
+    class Meta:
+        app_label = "mytools"
+        db_table = "billing_cycles"
+
     objects = BillingCycleQuerySet.as_manager()
 
     start_date = models.DateField(null=False, blank=False)

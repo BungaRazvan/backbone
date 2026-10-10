@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.test import override_settings
 
-from mytools.models import Bill, Electricity, Seg, Gas
+from mytools.models import Bill, ElectricityBill, SegBill, Gas
 from mytools.tasks import process_bills
 from tests.mytools.services.parse_bill.edf_energy_test import (
     EDF_PAGE_2_TEXT,
@@ -27,11 +27,11 @@ def test_process_edf_gas_electric_bill_creates_related_models(
     assert bill.b_gross_cost == Decimal("25.92")
     assert bill.b_net_cost == Decimal("-7.71")
 
-    electricity = Electricity.objects.get(e_bill=bill)
+    electricity = ElectricityBill.objects.get(e_bill=bill)
     assert electricity.e_kwh_used == Decimal("100.0")
     assert electricity.e_total_cost == Decimal("10.50")
 
-    seg = Seg.objects.get(s_bill=bill)
+    seg = SegBill.objects.get(s_bill=bill)
     assert seg.s_total_cost == Decimal("-33.63")
     assert not pdf_path.exists()
 
@@ -55,7 +55,7 @@ def test_process_edf_gas_electric_bill_empty_sections(
     assert bill.b_gross_cost is None
     assert bill.b_net_cost is None
     assert bill.b_date is None
-    assert Electricity.objects.count() == 0
-    assert Seg.objects.count() == 0
+    assert ElectricityBill.objects.count() == 0
+    assert SegBill.objects.count() == 0
     assert Gas.objects.count() == 0
     assert not pdf_path.exists()

@@ -9,7 +9,6 @@ from django.db.models import (
     OuterRef,
     Subquery,
     F,
-    FloatField,
     ExpressionWrapper,
     DecimalField,
     Q,
@@ -108,11 +107,15 @@ class SolarPerformanceView(APIView):
             )
 
         totals = totals.aggregate(
-            battery_charge=Sum("idp_battery_charge_kwh", output_field=FloatField()),
-            battery_discharge=Sum(
-                "idp_battery_discharge_kwh", output_field=FloatField()
+            battery_charge=Sum(
+                "idp_battery_charge_kwh", output_field=DecimalField()
             ),
-            home_consumption=Sum("idp_home_consumption_kwh", output_field=FloatField()),
+            battery_discharge=Sum(
+                "idp_battery_discharge_kwh", output_field=DecimalField()
+            ),
+            home_consumption=Sum(
+                "idp_home_consumption_kwh", output_field=DecimalField()
+            ),
             grid_import=Sum("idp_grid_import_kwh", output_field=DecimalField()),
             grid_export=Sum("idp_grid_export_kwh", output_field=DecimalField()),
         )

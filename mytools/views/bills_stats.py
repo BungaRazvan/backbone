@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from common.auth.decorators import require_token, validate_arguments
-from mytools.models import Bill, Electricity, Gas, Seg
+from mytools.models import Bill, ElectricityBill, Gas, SegBill
 from django.utils.decorators import method_decorator
 from django.db.models import Prefetch, F, Sum
 
@@ -62,7 +62,7 @@ class BillsStatsView(APIView):
             .prefetch_related(
                 Prefetch(
                     "electricity",
-                    queryset=Electricity.objects.filter(
+                    queryset=ElectricityBill.objects.filter(
                         e_to_date__month=F("e_bill__b_date__month")
                     ),
                 ),
@@ -74,7 +74,7 @@ class BillsStatsView(APIView):
                 ),
                 Prefetch(
                     "seg",
-                    queryset=Seg.objects.filter(
+                    queryset=SegBill.objects.filter(
                         s_to_date__month=F("s_bill__b_date__month")
                     ),
                 ),

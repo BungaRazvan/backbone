@@ -1,6 +1,5 @@
-import json
-
 from datetime import date
+from decimal import Decimal
 
 from celery import shared_task
 
@@ -71,10 +70,10 @@ def fetch_inverter_history_by_month(
             if day_num not in monthly_data:
                 monthly_data[day_num] = {}
 
-            monthly_data[day_num][field_name] = round(value, 2)
+            monthly_data[day_num][field_name] = round(Decimal(str(value)), 2)
 
         if not daily_values:
-            monthly_data[day_num][field_name] = 0
+            continue
 
     records = []
     for day_num, fields in monthly_data.items():
@@ -89,17 +88,17 @@ def fetch_inverter_history_by_month(
         for field_name, total_value in fields.items():
             setattr(record, field_name, total_value)
 
-        raw_loads = fields.get("idp_home_consumption_kwh", 0.0)
-        batt_discharge = fields.get("idp_battery_discharge_kwh", 0.0)
+        raw_loads = fields.get("idp_home_consumption_kwh", Decimal("0.00"))
+        batt_discharge = fields.get("idp_battery_discharge_kwh", Decimal("0.00"))
 
         if raw_loads > 0:
             # 5% battery conversion overhead + ~0.6 kWh flat daily inverter standing load
             adjusted_home_consumption = round(
-                raw_loads + (batt_discharge * 0.05) + 0.6, 2
+                raw_loads + (batt_discharge * Decimal("0.05")) + Decimal("0.6"), 2
             )
             record.idp_home_consumption_kwh = adjusted_home_consumption
         else:
-            record.idp_home_consumption_kwh = 0.0
+            record.idp_home_consumption_kwh = Decimal("0.00")
 
         records.append(record)
 

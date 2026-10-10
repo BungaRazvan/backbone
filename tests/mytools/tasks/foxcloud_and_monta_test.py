@@ -31,7 +31,7 @@ def test_foxcloud_signature_uses_crlf_separators():
 
     signature, timestamp = fox_cloud.get_signature(path)
     expected = hashlib.md5(
-        f"{path}\r\n{fox_cloud.token}\r\n{timestamp}".encode("UTF-8")
+        rf"{path}\r\n{fox_cloud.token}\r\n{timestamp}".encode("UTF-8")
     ).hexdigest()
 
     assert signature == expected
@@ -106,12 +106,12 @@ def test_fetch_inverter_history_by_month_handles_foxcloud_api_response(
 
     assert len(records) == 3
     assert records[0].idp_date == datetime(2026, 6, 1).date()
-    assert records[0].idp_grid_import_kwh == 1.0
-    assert records[0].idp_grid_export_kwh == 0.5
-    assert records[0].idp_battery_discharge_kwh == 0.2
-    assert records[0].idp_battery_charge_kwh == 0.1
-    assert records[0].idp_solar_generation_kwh == 0.4
-    assert records[0].idp_home_consumption_kwh == 2.61
+    assert records[0].idp_grid_import_kwh == Decimal("1.00")
+    assert records[0].idp_grid_export_kwh == Decimal("0.50")
+    assert records[0].idp_battery_discharge_kwh == Decimal("0.20")
+    assert records[0].idp_battery_charge_kwh == Decimal("0.10")
+    assert records[0].idp_solar_generation_kwh == Decimal("0.40")
+    assert records[0].idp_home_consumption_kwh == Decimal("2.61")
 
 
 def test_pull_completed_charges_saves_charge_point_history(db, mock_requests):

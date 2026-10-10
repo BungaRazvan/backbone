@@ -3,10 +3,10 @@ from django.db import models
 from common.mixins import AutoStrMixin
 
 
-class Seg(AutoStrMixin, models.Model):
+class SegBill(AutoStrMixin, models.Model):
     class Meta:
         app_label = "mytools"
-        db_table = "seg"
+        db_table = "seg_bill"
 
     s_bill = models.ForeignKey("Bill", on_delete=models.CASCADE, related_name="seg")
 

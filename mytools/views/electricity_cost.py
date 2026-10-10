@@ -9,9 +9,9 @@ from rest_framework.response import Response
 from common.auth.backends import app_auth
 from common.auth.decorators import validate_arguments
 from mytools.models import (
-    Electricity,
+    ElectricityBill,
     BillingCycle,
-    Seg,
+    SegBill,
     TariffPeriod,
     InverterDataPoint,
 )
@@ -68,11 +68,11 @@ class ElectricityCostView(APIView):
         start_date, end_date = get_month_range_for_billing_cycle(
             year, month, billing_cycle.cycle_day
         )
-        electrict_bills = Electricity.objects.filter(
+        electrict_bills = ElectricityBill.objects.filter(
             e_from_date__gte=start_date, e_to_date__lte=end_date
         )
 
-        seg_bills = Seg.objects.filter(
+        seg_bills = SegBill.objects.filter(
             s_from_date__gte=start_date, s_to_date__lte=end_date
         )
 

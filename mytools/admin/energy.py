@@ -1,10 +1,18 @@
 from django.contrib import admin
 
 # Register your models here.
-from mytools.models import (
-    InverterDataPoint,
-    ChargePointHistory,
-)
+from mytools.models import InverterDataPoint, ChargePointHistory, AnnualEnergySummary
+
+
+@admin.register(AnnualEnergySummary)
+class AnnualEnergySummaryAdmin(admin.ModelAdmin):
+    list_display = (
+        "year",
+        "last_proccessed_month",
+        "grid_import_kwh",
+        "grid_export_kwh",
+        "home_consumption_kwh",
+    )
 
 
 @admin.register(InverterDataPoint)

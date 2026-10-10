@@ -5,3 +5,4 @@ from .foxcloud.sync_daily_stats import sync_daily_stats
 from .foxcloud.fetch import fetch_inverter_history_by_month
 from .process_bills import process_bills
 from .monta import pull_completed_charges, calculate_unprocessed_charge_metrics
+from .energy import calculate_yearly_electric_usage
