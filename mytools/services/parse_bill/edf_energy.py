@@ -11,11 +11,13 @@ from common.utils import parse_uk_date_to_object
 
 from .parameters import BillParseParameters, UtilityCategory, BillSection
 from .base import BaseParser
+from mytools.models import TariffPeriod
+from mytools.models.bill import EnergyProvider
 
 
 def match_periods(text: str):
     return re.search(
-        r"\(\s*(\d{1,2}\s+[A-Za-z]+)\s+(\d{4})\s*-\s*(\d{1,2}\s+[A-Za-z]+)\s+(\d{4})\s*\)",
+        r"\(\s*(\d{1,2}\s+[A-Za-z]+)\s+(\d{4})\s*-\s*(\d{1,2})\b[^0-9)]*?\b([A-Za-z]+)\s+(\d{4})\s*\)",
         text,
     )
 
@@ -35,6 +37,24 @@ def parse_bill(
 ) -> Optional[Dict[UtilityCategory, List[BillSection]]]:
 
     extracted_data = defaultdict(list)
+
+    tariff_names = TariffPeriod.objects.filter(
+        tp_provider_name=EnergyProvider.EDF.value
+    ).values_list("tp_tariff_name", flat=True)
+    tariff_categories = {
+        **{
+            name: UtilityCategory.SEG
+            for name in tariff_names.filter(
+                tp_standard_export_rate__gt=0,
+                tp_standard_import_rate=0,
+            )
+        },
+        **{
+            name: UtilityCategory.ELECTRICITY
+            for name in tariff_names.filter(tp_standard_import_rate__gt=0)
+        },
+    }
+    matching_tariffs = sorted(tariff_categories, key=len, reverse=True)
 
     with pdfplumber.open(pdf_path) as pdf:
         full_text = ""
@@ -56,7 +76,22 @@ def parse_bill(
         # Peek at the next 300 characters to determine if this tariff is SEG or Electricity
         snippet = full_text[start_pos : start_pos + 300]
 
-        if re.search(r"export|seg|generation|fit", snippet, re.IGNORECASE):
+        normalized_snippet = re.sub(r"\s+", " ", snippet)
+        matched_category = None
+
+        for tariff_name in matching_tariffs:
+            normalized_name = re.sub(r"\s+", " ", tariff_name.strip())
+            if re.search(
+                rf"(?<!\w){re.escape(normalized_name)}(?!\w)",
+                normalized_snippet,
+                re.IGNORECASE,
+            ):
+                matched_category = tariff_categories[tariff_name]
+                break
+
+        if matched_category is not None:
+            anchors.append((start_pos, matched_category))
+        elif re.search(r"export|seg|generation|fit", snippet, re.IGNORECASE):
             anchors.append((start_pos, UtilityCategory.SEG))
         else:
             anchors.append((start_pos, UtilityCategory.ELECTRICITY))
@@ -92,7 +127,10 @@ def parse_bill(
         period_match = match_periods(block_text)
         if period_match:
             raw_from_date = f"{period_match.group(1)} {period_match.group(2)}"
-            raw_to_date = f"{period_match.group(3)} {period_match.group(4)}"
+            raw_to_date = (
+                f"{period_match.group(3)} {period_match.group(4)} "
+                f"{period_match.group(5)}"
+            )
             result.from_date = parse_uk_date_to_object(raw_from_date)
             result.to_date = parse_uk_date_to_object(raw_to_date)
 
