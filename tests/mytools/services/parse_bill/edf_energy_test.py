@@ -1,8 +1,37 @@
 import pytest
 import datetime
 
-from mytools.services.parse_bill.edf_energy import EdfParser
+from mytools.models import TariffPeriod
+from mytools.services.parse_bill.edf_energy import EdfParser, match_periods
 from mytools.services.parse_bill.parameters import BillParseParameters, UtilityCategory
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Short tariff (26 September 2026 - 30 September 2026)",
+        (
+            "Renewal Exclusive Fixed Jul28v3 "
+            "(26 September 2026 - 30 Payment method Direct Debit "
+            "September 2026)"
+        ),
+    ],
+)
+def test_match_periods_with_and_without_intervening_text(text):
+    period_match = match_periods(text)
+
+    assert period_match is not None
+    raw_from_date = f"{period_match.group(1)} {period_match.group(2)}"
+    raw_to_date = (
+        f"{period_match.group(3)} {period_match.group(4)} "
+        f"{period_match.group(5)}"
+    )
+    assert raw_from_date == "26 September 2026"
+    assert raw_to_date == "30 September 2026"
+    assert datetime.datetime.strptime(raw_to_date, "%d %B %Y").date() == datetime.date(
+        2026, 9, 30
+    )
+
 
 EDF_PAGE_2_TEXT = """
     Electricity tariff name Simply Fixed Jul26v14
@@ -30,11 +59,11 @@ EDF_PAGE_2_TEXT = """
     S Prices do not include VAT unless otherwise noted
     number
     1
-    Electricity tariff name Export 12m
+    Electricity tariff name Solar Saver 12m
     Supply address: 
     Rota Disconnections Alpha Identifier:
     Payment method 
-    Export 12m (26 May 2026 - 25 June 2026)
+    Solar Saver 12m (26 May 2026 - 25 June 2026)
     Unit rate 15.000p/kWh
     Electricity charges for meter  Standing charge 0.000p/day
     (£0.00/year)
@@ -90,6 +119,23 @@ EDF_PAGE_3_TEXT = """
 
 def test_parse_gas_electric_bill_sections(media_pdf_setup, mock_edf_pdfplumber):
     _, pdf_path = media_pdf_setup
+
+    TariffPeriod.objects.create(
+        tp_provider_name="EDF",
+        tp_tariff_name="Simply Fixed Jul26v14",
+        tp_start_date=datetime.date(2026, 1, 1),
+        tp_standard_import_rate="0.50756",
+        tp_standard_export_rate="0",
+        tp_standing_charge_rate="0.4713",
+    )
+    TariffPeriod.objects.create(
+        tp_provider_name="EDF",
+        tp_tariff_name="Solar Saver 12m",
+        tp_start_date=datetime.date(2026, 1, 1),
+        tp_standard_import_rate="0",
+        tp_standard_export_rate="0.15",
+        tp_standing_charge_rate="0",
+    )
 
     with mock_edf_pdfplumber(page_2_text=EDF_PAGE_2_TEXT, page_3_text=EDF_PAGE_3_TEXT):
         sections = EdfParser().extract_sections(BillParseParameters(file_path=pdf_path))
