@@ -19,6 +19,9 @@ import sentry_sdk
 from pathlib import Path
 from datetime import timedelta
 
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.celery import CeleryIntegration
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -36,7 +39,13 @@ DEBUG = env.bool("DEBUG", default=False)
 ENV = env.str("ENV")
 
 if not DEBUG:
-    sentry_sdk.init(dsn=env("SENTRY_DSN"), send_default_pii=True, environment=ENV)
+    sentry_sdk.init(
+        dsn=env("SENTRY_DSN"),
+        send_default_pii=False,
+        traces_sample_rate=0.2,
+        environment=ENV,
+        integrations=[DjangoIntegration(), CeleryIntegration()],
+    )
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
@@ -102,18 +111,30 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": DB_FOLDER / "db.sqlite3",
+        "OPTIONS": {
+            "timeout": 20,
+        },
     },
     "discord_db": {
         "NAME": DB_FOLDER / "discord_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
+        "OPTIONS": {
+            "timeout": 20,
+        },
     },
     "extension_db": {
         "NAME": DB_FOLDER / "extension_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
+        "OPTIONS": {
+            "timeout": 20,
+        },
     },
     "mytools_db": {
         "NAME": DB_FOLDER / "mytools_db.sqlite3",
         "ENGINE": "django.db.backends.sqlite3",
+        "OPTIONS": {
+            "timeout": 20,
+        },
     },
 }
 
@@ -200,3 +221,9 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_RESULT_EXPIRES = timedelta(days=31)
 
 BACKUP_ENCRYPTION_PASSPHRASE = env.str("BACKUP_ENCRYPTION_PASSPHRASE", default=None)
+
+
+BMW_CAR_DATA_MQTT_BROKER_HOST = env.str(
+    "BMW_CAR_DATA_MQTT_BROKER_HOST", default="localhost"
+)
+BMW_CAR_DATA_MQTT_BROKER_PORT = env.int("BMW_CAR_DATA_MQTT_BROKER_PORT", default=1883)
