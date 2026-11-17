@@ -12,3 +12,4 @@ from .billing_cycle import BillingCycle
 from .annual_energy_summary import AnnualEnergySummary
 from .vehicle import Vehicle
 from .bmw_car_data_event import BMWCarDataEvent
+from .vehicle_session import VehicleSession

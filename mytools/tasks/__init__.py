@@ -7,3 +7,4 @@ from .process_bills import process_bills
 from .monta import pull_completed_charges, calculate_unprocessed_charge_metrics
 from .energy import calculate_yearly_electric_usage
 from .bmw.process_bmw_mqtt_event import process_bmw_mqtt_event
+from .bmw.merge_bmw_events import merge_bmw_events

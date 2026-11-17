@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.test import override_settings
 
-from mytools.models import Bill, ElectricityBill, SegBill, Gas
+from mytools.models import Bill, ElectricityBill, SegBill, Gas, TariffPeriod
 from mytools.tasks import process_bills
 from tests.mytools.services.parse_bill.edf_energy_test import (
     EDF_PAGE_2_TEXT,
@@ -18,6 +18,23 @@ def test_process_edf_gas_electric_bill_creates_related_models(
     db, media_pdf_setup, mock_edf_pdfplumber
 ):
     media_root, pdf_path = media_pdf_setup
+
+    TariffPeriod.objects.create(
+        tp_provider_name="EDF",
+        tp_tariff_name="Simply Fixed Jul26v14",
+        tp_start_date="2026-01-01",
+        tp_standard_import_rate="0.50756",
+        tp_standard_export_rate="0",
+        tp_standing_charge_rate="0.4713",
+    )
+    TariffPeriod.objects.create(
+        tp_provider_name="EDF",
+        tp_tariff_name="Solar Saver 12m",
+        tp_start_date="2026-01-01",
+        tp_standard_import_rate="0",
+        tp_standard_export_rate="0.15",
+        tp_standing_charge_rate="0",
+    )
 
     with mock_edf_pdfplumber(page_2_text=EDF_PAGE_2_TEXT, page_3_text=EDF_PAGE_3_TEXT):
         with override_settings(MEDIA_ROOT=str(media_root)):

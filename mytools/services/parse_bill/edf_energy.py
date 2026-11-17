@@ -58,6 +58,7 @@ def parse_bill(
 
     with pdfplumber.open(pdf_path) as pdf:
         full_text = ""
+
         for page in pdf.pages[1:]:
             extracted = page.extract_text()
             if extracted:
