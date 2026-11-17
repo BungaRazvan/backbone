@@ -37,23 +37,28 @@ def process_bmw_mqtt_event(topic: str, raw_payload: str):
     if vin:
         vehicle = Vehicle.objects.filter(vin=vin).first()
 
-    raw_timestamp = payload.get("timestamp") or payload.get("timeOfMostRecentDrive")
-
-    if raw_timestamp:
-        if isinstance(raw_timestamp, (int, float)):
-            if raw_timestamp > 1e12:  # Milliseconds check
-                raw_timestamp = raw_timestamp / 1000.0
-            event_timestamp = datetime.fromtimestamp(raw_timestamp, tz=timezone.utc)
-
-        elif isinstance(raw_timestamp, str):
-            event_timestamp = parse_datetime(raw_timestamp)
-
     event_type = None
     data_block = payload.get("data", {})
+    raw_timestamp = None
+    event_timestamp = None
 
     if isinstance(data_block, dict) and data_block:
         # Grabs the first signal path key (e.g., "vehicle.cabin.door.row2.passenger.isOpen")
         event_type = list(data_block.keys())[0]
+
+        raw_timestamp = data_block[event_type].get("timestamp")
+
+    if not raw_timestamp:
+        raw_timestamp = payload.get("timestamp") or payload.get("timeOfMostRecentDrive")
+
+    if isinstance(raw_timestamp, (int, float)):
+        if raw_timestamp > 1e12:  # Milliseconds check
+            raw_timestamp = raw_timestamp / 1000.0
+
+        event_timestamp = datetime.fromtimestamp(raw_timestamp, tz=timezone.utc)
+
+    elif isinstance(raw_timestamp, str):
+        event_timestamp = parse_datetime(raw_timestamp)
 
     BMWCarDataEvent.objects.create(
         vehicle=vehicle,
