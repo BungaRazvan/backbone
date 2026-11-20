@@ -14,7 +14,14 @@ class VehicleAdmin(admin.ModelAdmin):
 
 @admin.register(BMWCarDataEvent)
 class BMWCarDataEventAdmin(admin.ModelAdmin):
-    list_display = ("vehicle", "event_type", "timestamp", "received_at", "processed")
+    list_display = (
+        "vehicle",
+        "event_type",
+        "timestamp",
+        "received_at",
+        "processed",
+        "fingerprint",
+    )
     search_fields = ("vehicle__vin", "event_type")
     list_filter = ("event_type", "processed", "vehicle")
     date_hierarchy = "timestamp"

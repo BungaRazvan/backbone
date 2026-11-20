@@ -4,6 +4,7 @@ import json
 import logging
 
 from celery import shared_task
+from django.db import IntegrityError
 from django.utils.dateparse import parse_datetime
 
 from mytools.models import BMWCarDataEvent, Vehicle
@@ -60,10 +61,13 @@ def process_bmw_mqtt_event(topic: str, raw_payload: str):
     elif isinstance(raw_timestamp, str):
         event_timestamp = parse_datetime(raw_timestamp)
 
-    BMWCarDataEvent.objects.create(
-        vehicle=vehicle,
-        event_type=event_type,
-        timestamp=event_timestamp,
-        payload=payload,
-        processed=False,
-    )
+    try:
+        BMWCarDataEvent.objects.create(
+            vehicle=vehicle,
+            event_type=event_type,
+            timestamp=event_timestamp,
+            payload=payload,
+            processed=False,
+        )
+    except IntegrityError:
+        logger.debug(f"Ignored duplicate BMW event [{event_type}]")
