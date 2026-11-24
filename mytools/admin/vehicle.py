@@ -1,9 +1,8 @@
-import json
+from django.contrib import admin
+
+from common.lib.pretty_json import PrettyJsonAdmin
 
 from mytools.models import BMWCarDataEvent, Vehicle, VehicleSession
-
-from django.contrib import admin
-from django.utils.html import format_html
 
 
 @admin.register(Vehicle)
@@ -13,7 +12,7 @@ class VehicleAdmin(admin.ModelAdmin):
 
 
 @admin.register(BMWCarDataEvent)
-class BMWCarDataEventAdmin(admin.ModelAdmin):
+class BMWCarDataEventAdmin(PrettyJsonAdmin, admin.ModelAdmin):
     list_display = (
         "vehicle",
         "event_type",
@@ -23,51 +22,73 @@ class BMWCarDataEventAdmin(admin.ModelAdmin):
         "fingerprint",
     )
     search_fields = ("vehicle__vin", "event_type")
-    list_filter = ("event_type", "processed", "vehicle")
+    list_filter = ("processed", "vehicle", "timestamp", "event_type")
     date_hierarchy = "timestamp"
     readonly_fields = ("formatted_payload", "received_at")
+    exclude = ("payload",)
 
+    actions = ["unprocess"]
+
+    @admin.display(description="Payload (JSON)")
     def formatted_payload(self, obj):
-        if not obj.payload:
-            return "-"
+        return self.format_json(obj, "payload")
 
-        # Pretty-print JSON with 4 spaces indentation
-        pretty_str = json.dumps(obj.payload, indent=4)
-        # Render inside a styled monospace box for maximum readability
-        return format_html(
-            '<pre style="background: #1e1e1e; color: #dcdcdc; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; overflow-x: auto;">{}</pre>',
-            pretty_str,
-        )
-
-    formatted_payload.short_description = "Payload (JSON)"
+    @admin.action(description="Mark as unprocessed")
+    def unprocess(modeladmin, request, queryset):
+        queryset.update(processed=False)
 
 
 @admin.register(VehicleSession)
-class VehicleSessionAdmin(admin.ModelAdmin):
-    readonly_fields = ("formatted_payload", "created_at")
-    exclude = ("merged_state",)
+class VehicleSessionAdmin(PrettyJsonAdmin, admin.ModelAdmin):
+    readonly_fields = ("formatted_route_points", "formatted_state", "created_at")
+    exclude = ("merged_state", "route_points")
     list_display = (
         "vehicle",
         "activity_type",
         "started_at",
         "ended_at",
+        "total_distance_km",
+        "electric_distance_km",
+        "petrol_distance_km",
+        "distance_split_method",
+        "fuel_level_start_liters",
+        "fuel_level_end_liters",
+        "fuel_level_change_display",
         "created_at",
     )
 
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        energy_field = form.base_fields.get("electric_consumed_kwh")
+
+        if energy_field:
+            energy_field.label = (
+                "Electric charged kWh"
+                if obj and obj.activity_type == VehicleSession.ActivityType.CHARGE
+                else "Electric consumed kWh"
+            )
+        return form
+
+    @admin.display(description="Split source")
+    def distance_split_method(self, obj):
+        return obj.get_distance_split_source_display() or "-"
+
+    @admin.display(description="Fuel level change (L)")
+    def fuel_level_change_display(self, obj):
+        return obj.fuel_level_change_liters
+
     @admin.display(description="Meged State")
-    def formatted_payload(self, obj):
-        if not obj.merged_state:
-            return "-"
+    def formatted_state(self, obj):
+        return self.format_json(obj, "merged_state")
 
-        pretty_str = json.dumps(
-            obj.merged_state,
-            indent=4,
-        )
+    @admin.display(description="Route Points")
+    def formatted_route_points(self, obj):
+        return self.format_json(obj, "route_points")
 
-        return format_html(
-            '<pre style="display: block; white-space: pre; margin: 0; '
-            "background: #1e1e1e; color: #dcdcdc; padding: 12px; "
-            "border-radius: 6px; font-family: monospace; font-size: 13px; "
-            'line-height: 1.4; overflow-x: auto; max-height: 600px;">{}</pre>',
-            pretty_str,
-        )
+    def delete_model(self, request, obj):
+        BMWCarDataEvent.objects.filter(session_id=obj.id).update(processed=False)
+        super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        BMWCarDataEvent.objects.filter(session_id__in=queryset).update(processed=False)
+        super().delete_queryset(request, queryset)

@@ -1,15 +1,20 @@
+import json
+from datetime import date, timedelta
+from decimal import Decimal, InvalidOperation
 from typing import List, Optional
 
-from datetime import timedelta
-from decimal import Decimal, InvalidOperation
-from django.utils import timezone
-from django.db import transaction
 from celery import shared_task
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db import transaction
+from django.utils import timezone
 
-from mytools.models import Vehicle, BMWCarDataEvent, VehicleSession
+from mytools.models import BMWCarDataEvent, Vehicle, VehicleSession
 
 NON_DRIVE_GAP = timedelta(minutes=5)
 POST_SHUTDOWN_GRACE = timedelta(minutes=2)
+DRIVE_IDLE_TIMEOUT = timedelta(minutes=15)
+CHARGE_IDLE_TIMEOUT = timedelta(hours=3)
+REFUEL_LEVEL_JUMP_LITERS = Decimal("5")
 
 MILES_TO_KM = Decimal("1.609344")
 UK_GAL_TO_LITERS = Decimal("4.54609")
@@ -19,18 +24,24 @@ US_GAL_TO_LITERS = Decimal("3.78541")
 DESC_IGNITION = "vehicle.drivetrain.engine.isignitionon"
 DESC_ENGINE_ACTIVE = "vehicle.drivetrain.engine.isactive"
 DESC_IS_MOVING = "vehicle.ismoving"
+DESC_DOOR_STATUS = "vehicle.cabin.door.status"
 
 DESC_ODOMETER = "vehicle.vehicle.travelleddistance"
 DESC_END_ODOMETER = "vehicle.trip.segment.end.travelleddistance"
 DESC_END_TIME = "vehicle.trip.segment.end.time"
 DESC_END_HV_SOC = "vehicle.trip.segment.end.drivetrain.batterymanagement.hvsoc"
 DESC_LIVE_HV_SOC = "vehicle.powertrain.electric.battery.stateofcharge.displayed"
-
+DESC_KOMBI_ELEC_RANGE = "vehicle.drivetrain.electricengine.kombiremainingelectricrange"
 DESC_EV_FRACTION = "vehicle.trip.segment.accumulated.drivetrain.transmission.setting.fractiondriveelectric"
 DESC_RECUP_TOTAL = (
     "vehicle.trip.segment.accumulated.drivetrain.electricengine.recuperationtotal"
 )
 DESC_EV_ENERGY_COMFORT = "vehicle.trip.segment.accumulated.drivetrain.electricengine.energyconsumptioncomfort"
+DESC_AVG_ELEC_CONSUMPTION = "vehicle.drivetrain.avgelectricrangeconsumption"
+SOC_BOUNDARY_WINDOW = timedelta(minutes=15)
+DESC_SME_ENERGY_DELTA_FULL = (
+    "vehicle.drivetrain.electricengine.charging.smeenergydeltafullycharged"
+)
 DESC_BATTERY_MAX_ENERGY = "vehicle.drivetrain.batterymanagement.maxenergy"
 
 DESC_REMAINING_FUEL = "vehicle.drivetrain.fuelsystem.remainingfuel"
@@ -45,27 +56,20 @@ SUMMARY_DESCRIPTORS = {
     DESC_END_TIME,
     DESC_END_ODOMETER,
     DESC_END_HV_SOC,
-    DESC_EV_FRACTION,
-    DESC_RECUP_TOTAL,
-    DESC_EV_ENERGY_COMFORT,
 }
 
 TRUE_VALUES = {"true", "1", "on", "active", "running", "yes"}
 FALSE_VALUES = {"false", "0", "off", "inactive", "stopped", "no"}
 
-
-SUMMARY_KEYS = {
-    "timeofmostrecentdrive",
-    "electricallydrivendistance",
-    "electricalenergyconsumption",
-    "fuelconsumption",
-    "mileageafterlastdrive",
+ACTIVE_CHARGE_STATUSES = {
+    "CHARGINGACTIVE",
+    "INITIALIZATION",
+    "CHARGINGPAUSED",
 }
 
 
 def _unwrap_event(ev: BMWCarDataEvent) -> tuple[object, str]:
     """Unwraps bridge payload {'data': {'<descriptor>': {'value': X, 'unit': Y}}} or flat {'value': X}."""
-
     payload = ev.payload
 
     if not isinstance(payload, dict):
@@ -78,6 +82,7 @@ def _unwrap_event(ev: BMWCarDataEvent) -> tuple[object, str]:
 
         if isinstance(entry, dict):
             return entry.get("value"), str(entry.get("unit", "")).strip().lower()
+
         return entry, ""
 
     return payload.get("value", payload), str(payload.get("unit", "")).strip().lower()
@@ -118,13 +123,6 @@ def _to_liters(num: Decimal | None, unit: str) -> Decimal | None:
     return num
 
 
-def _extract_value(payload):
-    if isinstance(payload, dict):
-        return payload.get("value", payload)
-
-    return payload
-
-
 def _is_drive_start(key_lower: str, val_str: str) -> bool:
     return (
         key_lower in {DESC_IGNITION, DESC_ENGINE_ACTIVE, DESC_IS_MOVING}
@@ -136,8 +134,21 @@ def _is_ignition_off(key_lower: str, val_str: str) -> bool:
     return key_lower == DESC_IGNITION and val_str in FALSE_VALUES
 
 
-def _is_summary_event(key_lower):
+def _is_summary_event(key_lower: str) -> bool:
     return key_lower in SUMMARY_DESCRIPTORS
+
+
+def _lock_state(key_lower: str, val_str: str) -> Optional[str]:
+    if key_lower != DESC_DOOR_STATUS:
+        return None
+
+    if val_str == "unlocked":
+        return "UNLOCK"
+
+    if val_str in {"locked", "secured"}:
+        return "LOCK"
+
+    return None
 
 
 @shared_task
@@ -147,129 +158,360 @@ def merge_bmw_events():
     for vehicle in Vehicle.objects.filter(is_active=True, make="BMW"):
         events = list(
             BMWCarDataEvent.objects.filter(vehicle=vehicle, processed=False).order_by(
-                "timestamp", "received_at"
+                "timestamp", "received_at", "id"
             )
         )
-
         if not events:
             continue
 
         process_vehicle_stream(vehicle, events, now)
 
 
+def reconcile_same_day_range_splits(
+    session_clusters: List[tuple[VehicleSession, List[BMWCarDataEvent]]],
+):
+    sessions_by_date: dict[date, list[tuple[VehicleSession, List[BMWCarDataEvent]]]] = (
+        {}
+    )
+    for session, cluster in session_clusters:
+        if (
+            session.activity_type == VehicleSession.ActivityType.DRIVE
+            and session.total_distance_km is not None
+            and session.total_distance_km > 0
+            and cluster
+            and cluster[0].event_time is not None
+        ):
+            sessions_by_date.setdefault(cluster[0].event_time.date(), []).append(
+                (session, cluster)
+            )
+
+    for sessions in sessions_by_date.values():
+        measured_range_splits = [
+            (session, cluster)
+            for session, cluster in sessions
+            if session.distance_split_source
+            in {
+                VehicleSession.DistanceSplitSource.BMW_REPORTED,
+                VehicleSession.DistanceSplitSource.ELECTRIC_RANGE_DROP,
+            }
+            and session.electric_distance_km is not None
+            and (
+                session.distance_split_source
+                == VehicleSession.DistanceSplitSource.BMW_REPORTED
+                or session.electric_distance_km > 0
+            )
+        ]
+        total_electric_km = sum(
+            (session.electric_distance_km for session, _ in measured_range_splits),
+            Decimal("0"),
+        )
+        total_distance_km = sum(
+            (session.total_distance_km for session, _ in measured_range_splits),
+            Decimal("0"),
+        )
+        if total_distance_km <= 0:
+            continue
+
+        same_day_electric_share = total_electric_km / total_distance_km
+        for session, cluster in sessions:
+            if session.distance_split_source not in {
+                VehicleSession.DistanceSplitSource.ELECTRIC_RANGE_DROP,
+                VehicleSession.DistanceSplitSource.SAME_DAY_PATTERN,
+            } or (
+                session.distance_split_source
+                == VehicleSession.DistanceSplitSource.ELECTRIC_RANGE_DROP
+                and session.electric_distance_km != 0
+            ):
+                continue
+
+            electric_distance_km = min(
+                session.total_distance_km,
+                (session.total_distance_km * same_day_electric_share).quantize(
+                    Decimal("0.01")
+                ),
+            )
+            session.electric_distance_km = electric_distance_km
+            session.petrol_distance_km = (
+                session.total_distance_km - electric_distance_km
+            ).quantize(Decimal("0.01"))
+            session.distance_split_source = (
+                VehicleSession.DistanceSplitSource.SAME_DAY_PATTERN
+            )
+            session.save(
+                update_fields=[
+                    "electric_distance_km",
+                    "petrol_distance_km",
+                    "distance_split_source",
+                ]
+            )
+
+
 def process_vehicle_stream(
     vehicle: Vehicle, events: List[BMWCarDataEvent], now: timezone.datetime
 ):
-
     buffer: List[BMWCarDataEvent] = []
     in_drive = False
+    in_charge = False
     ignition_off_at = None
     saw_summary = False
+    last_odo_km: Optional[Decimal] = None
+    last_fuel_liters: Optional[Decimal] = None
+    last_lock_state: Optional[str] = None
+    session_clusters: List[tuple[VehicleSession, List[BMWCarDataEvent]]] = []
 
     def flush(activity_override: Optional[str] = None):
-        nonlocal buffer, in_drive, ignition_off_at, saw_summary
+        nonlocal buffer, in_drive, in_charge, ignition_off_at, saw_summary, last_odo_km, last_lock_state
 
         if buffer:
-            save_session(vehicle, buffer, activity_override=activity_override)
+            cluster = buffer
+            session = save_session(
+                vehicle, cluster, activity_override=activity_override
+            )
+            session_clusters.append((session, cluster))
 
         buffer = []
         in_drive = False
+        in_charge = False
         ignition_off_at = None
         saw_summary = False
+        last_odo_km = None
+        last_lock_state = None
+
+    def _update_charge_flag(key_l: str, val_u: str):
+        nonlocal in_charge
+
+        if key_l == DESC_CHARGING_STATUS:
+            if val_u in ACTIVE_CHARGE_STATUSES:
+                in_charge = True
+
+            elif val_u == "CHARGINGENDED":
+                in_charge = False
+
+        elif key_l == DESC_PORT_STATUS:
+            if val_u == "CONNECTED":
+                in_charge = True
+            elif val_u == "DISCONNECTED":
+                in_charge = False
 
     for ev in events:
         ev_time = ev.event_time
         key_lower = (ev.event_type or "").lower()
-        raw_val = _extract_value(ev.payload)
+        raw_val, unit = _unwrap_event(ev)
         val_str = str(raw_val).strip().lower()
+        val_upper = str(raw_val).strip().upper()
+        cur_odo_km: Optional[Decimal] = None
+
+        if key_lower in {DESC_ODOMETER, DESC_END_ODOMETER}:
+            cur_odo_km = _to_km(_to_decimal(raw_val), unit)
+
+        cur_lock_state = _lock_state(key_lower, val_str)
+        fuel_level_liters = (
+            _to_liters(_to_decimal(raw_val), unit)
+            if key_lower == DESC_REMAINING_FUEL
+            else None
+        )
+        refuel_level_jump = (
+            fuel_level_liters is not None
+            and last_fuel_liters is not None
+            and fuel_level_liters - last_fuel_liters >= REFUEL_LEVEL_JUMP_LITERS
+        )
+
+        if fuel_level_liters is not None:
+            last_fuel_liters = fuel_level_liters
+
+        if in_drive and refuel_level_jump:
+            previous_odometer = last_odo_km
+            flush(VehicleSession.ActivityType.DRIVE)
+            buffer.append(ev)
+            last_odo_km = previous_odometer
+            continue
 
         if not buffer:
             buffer.append(ev)
+            _update_charge_flag(key_lower, val_upper)
 
-            if _is_drive_start(key_lower, val_str):
+            if _is_drive_start(key_lower, val_str) or _is_summary_event(key_lower):
                 in_drive = True
-            elif _is_summary_event(key_lower):
-                saw_summary = True
-                in_drive = True
+
+                if _is_summary_event(key_lower):
+                    saw_summary = True
+
+            if cur_odo_km is not None:
+                last_odo_km = cur_odo_km
+
+            if cur_lock_state:
+                last_lock_state = cur_lock_state
 
             continue
 
         prev_time = buffer[-1].event_time
+        odo_advanced = (
+            cur_odo_km is not None
+            and last_odo_km is not None
+            and cur_odo_km > last_odo_km
+        )
 
         # --- CASE 1: Currently inside a DRIVE cycle ---
         if in_drive:
-            if ignition_off_at and _is_drive_start(key_lower, val_str):
+            if ignition_off_at and (
+                _is_drive_start(key_lower, val_str) or odo_advanced
+            ):
                 flush(VehicleSession.ActivityType.DRIVE)
                 buffer.append(ev)
+                _update_charge_flag(key_lower, val_upper)
                 in_drive = True
+
+                if cur_odo_km is not None:
+                    last_odo_km = cur_odo_km
+
+                if cur_lock_state:
+                    last_lock_state = cur_lock_state
+
                 continue
 
+            # Absorb lock/unlock or summary events right after shutdown; flush on real gaps/other events
             if (
                 ignition_off_at
                 and (ev_time - ignition_off_at) > POST_SHUTDOWN_GRACE
                 and not _is_summary_event(key_lower)
+                and cur_lock_state is None
             ):
                 flush(VehicleSession.ActivityType.DRIVE)
                 buffer.append(ev)
+                _update_charge_flag(key_lower, val_upper)
 
-                if _is_drive_start(key_lower, val_str):
+                if _is_drive_start(key_lower, val_str) or _is_summary_event(key_lower):
                     in_drive = True
 
+                    if _is_summary_event(key_lower):
+                        saw_summary = True
+
+                if cur_odo_km is not None:
+                    last_odo_km = cur_odo_km
+
+                if cur_lock_state:
+                    last_lock_state = cur_lock_state
+
                 continue
 
+            if (
+                ignition_off_at is None
+                and not odo_advanced
+                and (ev_time - prev_time) > DRIVE_IDLE_TIMEOUT
+            ):
+                flush(VehicleSession.ActivityType.DRIVE)
+                buffer.append(ev)
+                _update_charge_flag(key_lower, val_upper)
+
+                if _is_drive_start(key_lower, val_str) or _is_summary_event(key_lower):
+                    in_drive = True
+
+                    if _is_summary_event(key_lower):
+                        saw_summary = True
+
+                if cur_odo_km is not None:
+                    last_odo_km = cur_odo_km
+
+                if cur_lock_state:
+                    last_lock_state = cur_lock_state
+
+                continue
+
+        # --- CASE 2: Outside a DRIVE cycle ---
         if not in_drive:
-            if _is_drive_start(key_lower, val_str):
-                flush()
+            # Merge pre-drive events into the upcoming DRIVE if within NON_DRIVE_GAP;
+            # otherwise flush the older stationary cluster first.
+            if _is_drive_start(key_lower, val_str) or odo_advanced:
+                if (ev_time - prev_time) > NON_DRIVE_GAP:
+                    flush(VehicleSession.ActivityType.CHARGE if in_charge else None)
+
                 buffer.append(ev)
+                _update_charge_flag(key_lower, val_upper)
                 in_drive = True
+                ignition_off_at = None
+
+                if cur_odo_km is not None:
+                    last_odo_km = cur_odo_km
+
+                if cur_lock_state:
+                    last_lock_state = cur_lock_state
+
                 continue
 
-            if (ev_time - prev_time) > NON_DRIVE_GAP:
-                flush()
+            gap_limit = CHARGE_IDLE_TIMEOUT if in_charge else NON_DRIVE_GAP
+
+            if (ev_time - prev_time) > gap_limit:
+                flush(VehicleSession.ActivityType.CHARGE if in_charge else None)
                 buffer.append(ev)
+                _update_charge_flag(key_lower, val_upper)
 
                 if _is_summary_event(key_lower):
                     in_drive = True
                     saw_summary = True
 
+                if cur_odo_km is not None:
+                    last_odo_km = cur_odo_km
+
+                if cur_lock_state:
+                    last_lock_state = cur_lock_state
+
                 continue
 
+        # --- Append to active buffer & update tracked state ---
         buffer.append(ev)
+        _update_charge_flag(key_lower, val_upper)
+
+        if cur_lock_state:
+            last_lock_state = cur_lock_state
+
+        if cur_odo_km is not None:
+            if odo_advanced:
+                in_drive = True
+                ignition_off_at = None
+            last_odo_km = cur_odo_km
 
         if _is_ignition_off(key_lower, val_str) and ignition_off_at is None:
             ignition_off_at = ev_time
+
         elif _is_summary_event(key_lower):
             saw_summary = True
 
             if not in_drive:
                 in_drive = True
 
-    if not buffer:
-        return
+    if buffer:
+        quiet_for = now - buffer[-1].event_time
 
-    quiet_for = now - buffer[-1].event_time
+        if in_drive:
+            if (
+                ignition_off_at and (saw_summary or quiet_for >= POST_SHUTDOWN_GRACE)
+            ) or (ignition_off_at is None and quiet_for >= DRIVE_IDLE_TIMEOUT):
+                flush(VehicleSession.ActivityType.DRIVE)
 
-    if in_drive:
-        if ignition_off_at and (saw_summary or quiet_for >= POST_SHUTDOWN_GRACE):
-            flush(VehicleSession.ActivityType.DRIVE)
+        elif in_charge:
+            if quiet_for >= CHARGE_IDLE_TIMEOUT:
+                flush(VehicleSession.ActivityType.CHARGE)
 
-    else:
-        if quiet_for >= NON_DRIVE_GAP:
+        elif quiet_for >= NON_DRIVE_GAP:
             flush()
+
+    reconcile_same_day_range_splits(session_clusters)
 
 
 @transaction.atomic
 def save_session(
     vehicle: Vehicle,
     cluster: List[BMWCarDataEvent],
-    activity_override: VehicleSession.ActivityType,
-):
+    activity_override: Optional[str] = None,
+) -> VehicleSession:
     merged_state = {}
     route_points = []
     keys_seen = set()
+    door_statuses = []
 
     odometers = []
-    hv_socs = []
+    hv_soc_samples = []
+    electric_ranges_km = []
     fuels_liters = []
     ect_temps = []
 
@@ -278,12 +520,14 @@ def save_session(
     ev_fraction_pct = None
     recup_rate = None
     ev_kwh_comfort = None
+    avg_elec_kwh_per_100km = None
+    sme_energy_deltas = []
     usable_battery_kwh = None
-    activity = None
-
     recup_unit = ""
-
     is_charging = False
+    saw_drive_signal = False
+    engine_active_reported = False
+    ice_engine_active = False
 
     for ev in cluster:
         key = ev.event_type or ""
@@ -293,108 +537,221 @@ def save_session(
         val, unit = _unwrap_event(ev)
         merged_state[key] = {"value": val, "unit": unit} if unit else val
         num = _to_decimal(val)
+        val_low = str(val).strip().lower()
         val_upper = str(val).strip().upper()
+
+        if _is_drive_start(key_lower, val_low):
+            saw_drive_signal = True
+
+        if key_lower == DESC_ENGINE_ACTIVE:
+            engine_active_reported = True
+            ice_engine_active = ice_engine_active or val_low in TRUE_VALUES
+
+        state = _lock_state(key_lower, val_low)
+
+        if state:
+            door_statuses.append(state)
 
         if key_lower == DESC_ODOMETER and num is not None:
             odometers.append(_to_km(num, unit))
-
         elif key_lower == DESC_END_ODOMETER and num is not None:
             end_segment_odo = _to_km(num, unit)
-
         elif key_lower == DESC_LIVE_HV_SOC and num is not None:
-            hv_socs.append(num)
-
+            hv_soc_samples.append((ev.event_time, num))
         elif key_lower == DESC_END_HV_SOC and num is not None:
             end_segment_soc = num
+        elif key_lower == DESC_KOMBI_ELEC_RANGE and num is not None:
+            range_km = _to_km(num, unit)
+
+            if range_km is not None:
+                electric_ranges_km.append(range_km)
 
         elif key_lower == DESC_REMAINING_FUEL and num is not None:
-            fuels_liters.append(num)
+            fuel_val = _to_liters(num, unit)
+
+            if fuel_val is not None:
+                fuels_liters.append(fuel_val)
 
         elif key_lower == DESC_ENGINE_ECT and num is not None:
             ect_temps.append(num)
-
         elif key_lower == DESC_EV_FRACTION and num is not None:
             ev_fraction_pct = num
-
         elif key_lower == DESC_RECUP_TOTAL and num is not None:
             recup_rate = num
             recup_unit = unit
-
         elif key_lower == DESC_EV_ENERGY_COMFORT and num is not None:
-            ev_kwh_confort = num
-
+            ev_kwh_comfort = num
+        elif key_lower == DESC_AVG_ELEC_CONSUMPTION and num is not None:
+            avg_elec_kwh_per_100km = num
+        elif key_lower == DESC_SME_ENERGY_DELTA_FULL and num is not None:
+            sme_energy_deltas.append(num)
         elif key_lower == DESC_BATTERY_MAX_ENERGY and num is not None:
             usable_battery_kwh = num
 
         if (
-            key_lower == DESC_CHARGING_STATUS
-            and val_upper == "CHARGINGACTIVE"
-            or key_lower == DESC_PORT_STATUS
-            and val_upper == "CONNECTED"
-        ):
+            key_lower == DESC_CHARGING_STATUS and val_upper in ACTIVE_CHARGE_STATUSES
+        ) or (key_lower == DESC_PORT_STATUS and val_upper == "CONNECTED"):
             is_charging = True
 
         if key_lower in {DESC_LAT, DESC_LON, DESC_LIVE_HV_SOC}:
             route_points.append(
                 {
-                    "ts": ev.event_time,
+                    "ts": ev.event_time.isoformat() if ev.event_time else None,
                     "key": key,
                     "value": val,
                     "unit": unit,
                 }
             )
 
-    # Classify session
-    if activity_override:
-        activity = activity_override
-
-    elif keys_seen & SUMMARY_DESCRIPTORS:
-        activity = VehicleSession.ActivityType.DRIVE
-
-    elif is_charging:
-        activity = VehicleSession.ActivityType.CHARGE
-
-    elif any("door" in k or "trunk" in k or "alarm" in k for k in keys_seen):
-        activity = VehicleSession.ActivityType.ACCESS
-
-    else:
-        activity = VehicleSession.ActivityType.OTHER
-
     if end_segment_odo is not None:
         odometers.append(end_segment_odo)
 
     start_odo = min(odometers) if odometers else None
     end_odo = max(odometers) if odometers else None
-    total_dist_km = (end_odo - start_odo) if odometers else None
+    total_dist_km = (
+        (end_odo - start_odo)
+        if (start_odo is not None and end_odo is not None)
+        else None
+    )
+    has_distance_gain = total_dist_km is not None and total_dist_km > 0
 
-    electrict_dist_km = None
-    if total_dist_km is not None and ev_fraction_pct is not None:
-        electrict_dist_km = (total_dist_km * ev_fraction_pct / Decimal("100")).quantize(
-            Decimal("0.01")
-        )
-
-    start_soc = hv_socs[0] if hv_socs else None
-    end_soc = (
-        end_segment_soc
-        if end_segment_soc is not None
-        else (hv_socs[-1] if hv_socs else None)
+    has_access_key = any(
+        token in k
+        for k in keys_seen
+        for token in ("door", "trunk", "hood", "window", "sunroof", "roof")
     )
 
-    # Net electric kWh consumed
-    electric_kwh = ev_kwh_comfort
+    # Classify session: DRIVE and CHARGE take priority over merged door/lock events
+    if activity_override:
+        activity = activity_override
+    elif saw_drive_signal or (keys_seen & SUMMARY_DESCRIPTORS) or has_distance_gain:
+        activity = VehicleSession.ActivityType.DRIVE
+    elif is_charging:
+        activity = VehicleSession.ActivityType.CHARGE
+    elif door_statuses:
+        activity = (
+            VehicleSession.ActivityType.UNLOCK
+            if door_statuses[-1] == "UNLOCK"
+            else VehicleSession.ActivityType.LOCK
+        )
+    elif has_access_key:
+        activity = VehicleSession.ActivityType.ACCESS
+    else:
+        activity = VehicleSession.ActivityType.OTHER
+
+    electric_dist_km = None
+    distance_split_source = ""
+
     if (
-        electric_kwh is None
-        and start_soc is not None
-        and end_soc is not None
-        and start_soc > end_soc
+        total_dist_km is not None
+        and ev_fraction_pct is not None
+        and Decimal("0") <= ev_fraction_pct <= Decimal("100")
     ):
-        pack_kwh = usable_battery_kwh or Decimal("10.4")
-        electric_kwh = ((start_soc - end_soc) / Decimal("100") * pack_kwh).quantize(
+        electric_dist_km = (total_dist_km * ev_fraction_pct / Decimal("100")).quantize(
             Decimal("0.01")
         )
+        distance_split_source = VehicleSession.DistanceSplitSource.BMW_REPORTED
+    elif (
+        activity == VehicleSession.ActivityType.DRIVE
+        and total_dist_km is not None
+        and total_dist_km > 0
+        and len(electric_ranges_km) >= 2
+        and electric_ranges_km[0] >= electric_ranges_km[-1] >= 0
+    ):
+        range_drop_km = electric_ranges_km[0] - electric_ranges_km[-1]
+        electric_dist_km = min(total_dist_km, range_drop_km).quantize(Decimal("0.01"))
+        distance_split_source = VehicleSession.DistanceSplitSource.ELECTRIC_RANGE_DROP
+
+    petrol_dist_km = None
+
+    if total_dist_km is not None and electric_dist_km is not None:
+        petrol_dist_km = max(Decimal("0"), total_dist_km - electric_dist_km).quantize(
+            Decimal("0.01")
+        )
+    cluster_start = cluster[0].event_time
+    cluster_end = cluster[-1].event_time
+
+    if hv_soc_samples:
+        if activity == VehicleSession.ActivityType.DRIVE:
+            end_candidates = [
+                (timestamp, soc)
+                for timestamp, soc in hv_soc_samples
+                if cluster_end - SOC_BOUNDARY_WINDOW <= timestamp <= cluster_end
+            ]
+            end_candidate_times = {timestamp for timestamp, _ in end_candidates}
+            start_candidates = [
+                (timestamp, soc)
+                for timestamp, soc in hv_soc_samples
+                if (
+                    cluster_start <= timestamp <= cluster_start + SOC_BOUNDARY_WINDOW
+                    and timestamp not in end_candidate_times
+                )
+            ]
+            start_soc = start_candidates[-1][1] if start_candidates else None
+            end_soc = (
+                end_segment_soc
+                if end_segment_soc is not None
+                else (end_candidates[-1][1] if end_candidates else None)
+            )
+
+        else:
+            start_soc = hv_soc_samples[0][1]
+            end_soc = (
+                end_segment_soc
+                if end_segment_soc is not None
+                else hv_soc_samples[-1][1]
+            )
+    elif activity == VehicleSession.ActivityType.CHARGE:
+        start_soc = None
+        end_soc = end_segment_soc
+    else:
+        start_soc = None
+        end_soc = end_segment_soc
+
+    electric_kwh = ev_kwh_comfort
+    electric_kwh_source = (
+        VehicleSession.ElectricEnergySource.BMW_REPORTED
+        if electric_kwh is not None
+        else ""
+    )
+    if (
+        electric_kwh is None
+        and activity == VehicleSession.ActivityType.DRIVE
+        and avg_elec_kwh_per_100km is not None
+        and electric_dist_km is not None
+    ):
+        electric_kwh = (
+            avg_elec_kwh_per_100km * electric_dist_km / Decimal("100")
+        ).quantize(Decimal("0.01"))
+        electric_kwh_source = VehicleSession.ElectricEnergySource.AVG_CONSUMPTION
+
+    if (
+        electric_kwh is None
+        and activity == VehicleSession.ActivityType.CHARGE
+        and start_soc is not None
+        and end_soc is not None
+        and usable_battery_kwh is not None
+        and end_soc > start_soc
+    ):
+        electric_kwh = (
+            (end_soc - start_soc) / Decimal("100") * usable_battery_kwh
+        ).quantize(Decimal("0.01"))
+        electric_kwh_source = VehicleSession.ElectricEnergySource.SOC_CHANGE
+
+    if (
+        electric_kwh is None
+        and activity == VehicleSession.ActivityType.CHARGE
+        and len(sme_energy_deltas) >= 2
+        and sme_energy_deltas[0] > sme_energy_deltas[-1]
+    ):
+        electric_kwh = (sme_energy_deltas[0] - sme_energy_deltas[-1]).quantize(
+            Decimal("0.01")
+        )
+        electric_kwh_source = VehicleSession.ElectricEnergySource.SME_ENERGY_DELTA
 
     # Recuperated energy (kWh/100km or kWh/62mi)
     recuperated_kwh = None
+
     if recup_rate is not None and total_dist_km is not None:
         divisor = (
             Decimal("62") if recup_unit in {"kwh/62mi", "kwh/62 mi"} else Decimal("100")
@@ -404,14 +761,34 @@ def save_session(
         )
 
     # Fuel delta & petrol engine detection
+    fuel_level_start_liters = fuels_liters[0] if fuels_liters else None
+    fuel_level_end_liters = fuels_liters[-1] if fuels_liters else None
     fuel_liters = None
-    if len(fuels_liters) >= 2 and fuels_liters[0] > fuels_liters[-1]:
+    fuel_levels_decreased = all(
+        previous >= current for previous, current in zip(fuels_liters, fuels_liters[1:])
+    )
+
+    if (
+        len(fuels_liters) >= 2
+        and fuels_liters[0] > fuels_liters[-1]
+        and fuel_levels_decreased
+    ):
         fuel_liters = (fuels_liters[0] - fuels_liters[-1]).quantize(Decimal("0.01"))
 
     ect_rise = (
         (max(ect_temps) - min(ect_temps)) if len(ect_temps) >= 2 else Decimal("0")
     )
-    ice_engine_ran = bool((fuel_liters and fuel_liters > 0) or ect_rise > Decimal("5"))
+
+    if (
+        ice_engine_active
+        or (fuel_liters and fuel_liters > 0)
+        or ect_rise > Decimal("5")
+    ):
+        ice_engine_ran = True
+    elif engine_active_reported:
+        ice_engine_ran = False
+    else:
+        ice_engine_ran = False
 
     session = VehicleSession.objects.create(
         vehicle=vehicle,
@@ -419,19 +796,26 @@ def save_session(
         started_at=cluster[0].event_time,
         ended_at=cluster[-1].event_time,
         event_count=len(cluster),
-        merged_state=merged_state,
+        merged_state=json.loads(json.dumps(merged_state, cls=DjangoJSONEncoder)),
         start_odometer_km=start_odo,
         end_odometer_km=end_odo,
         total_distance_km=total_dist_km,
-        electric_distance_km=electrict_dist_km,
+        electric_distance_km=electric_dist_km,
+        petrol_distance_km=petrol_dist_km,
+        distance_split_source=distance_split_source,
         fuel_consumed_liters=fuel_liters,
+        fuel_level_start_liters=fuel_level_start_liters,
+        fuel_level_end_liters=fuel_level_end_liters,
         electric_consumed_kwh=electric_kwh,
+        electric_consumed_kwh_source=electric_kwh_source,
         recuperated_kwh=recuperated_kwh,
         ice_engine_ran=ice_engine_ran,
         start_soc=start_soc,
         end_soc=end_soc,
         route_points=(
-            route_points if activity == VehicleSession.ActivityType.DRIVE else []
+            json.loads(json.dumps(route_points, cls=DjangoJSONEncoder))
+            if activity == VehicleSession.ActivityType.DRIVE
+            else []
         ),
     )
 
@@ -439,3 +823,5 @@ def save_session(
         processed=True,
         session=session,
     )
+
+    return session
