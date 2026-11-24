@@ -1,6 +1,7 @@
 import json
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
+from itertools import groupby
 from typing import List, Optional
 
 from celery import shared_task
@@ -14,7 +15,6 @@ NON_DRIVE_GAP = timedelta(minutes=5)
 POST_SHUTDOWN_GRACE = timedelta(minutes=2)
 DRIVE_IDLE_TIMEOUT = timedelta(minutes=15)
 CHARGE_IDLE_TIMEOUT = timedelta(hours=3)
-REFUEL_LEVEL_JUMP_LITERS = Decimal("5")
 
 MILES_TO_KM = Decimal("1.609344")
 UK_GAL_TO_LITERS = Decimal("4.54609")
@@ -51,6 +51,7 @@ DESC_PORT_STATUS = "vehicle.body.chargingport.status"
 
 DESC_LAT = "vehicle.cabin.infotainment.navigation.currentlocation.latitude"
 DESC_LON = "vehicle.cabin.infotainment.navigation.currentlocation.longitude"
+DESC_ALTITUDE = "vehicle.cabin.infotainment.navigation.currentlocation.altitude"
 
 SUMMARY_DESCRIPTORS = {
     DESC_END_TIME,
@@ -110,6 +111,101 @@ def _to_km(num: Decimal | None, unit: str) -> Decimal | None:
     return num
 
 
+def _to_meters(num: Decimal | None, unit: str) -> Decimal | None:
+    if num is None:
+        return None
+
+    if unit in {"", "m", "meter", "meters"}:
+        return num
+    if unit in {"km", "kilometer", "kilometers"}:
+        return num * Decimal("1000")
+    if unit in {"ft", "foot", "feet"}:
+        return num * Decimal("0.3048")
+
+    return None
+
+
+def _build_route_points(route_samples: List[dict]) -> List[dict]:
+    current_lat = None
+    current_lon = None
+    signals = {}
+    points = []
+    ordered_samples = sorted(route_samples, key=lambda sample: sample.get("ts") or "")
+
+    for ts, samples in groupby(ordered_samples, key=lambda sample: sample.get("ts")):
+        coordinates_changed = False
+        altitude_updated = False
+
+        for sample in samples:
+            key = (sample.get("key") or "").lower()
+            value = sample.get("value")
+            unit = sample.get("unit", "")
+
+            if key in {DESC_LAT, DESC_LON}:
+                num = _to_decimal(value)
+                if num is None:
+                    continue
+                if key == DESC_LAT:
+                    current_lat = float(num)
+                else:
+                    current_lon = float(num)
+                coordinates_changed = True
+            elif key == DESC_ALTITUDE:
+                altitude_m = _to_meters(_to_decimal(value), unit)
+                if altitude_m is not None:
+                    signals["altitude_m"] = {
+                        "value": float(altitude_m),
+                        "unit": "m",
+                        "ts": ts,
+                    }
+                    altitude_updated = True
+            elif key == DESC_LIVE_HV_SOC:
+                num = _to_decimal(value)
+                if num is not None:
+                    signals["soc"] = {
+                        "value": float(num),
+                        "unit": unit,
+                        "ts": ts,
+                    }
+            elif key == DESC_ENGINE_ACTIVE:
+                normalized = str(value).strip().lower()
+                if isinstance(value, bool):
+                    engine_active = value
+                elif normalized in TRUE_VALUES:
+                    engine_active = True
+                elif normalized in FALSE_VALUES:
+                    engine_active = False
+                else:
+                    continue
+                signals["engine_active"] = {
+                    "value": engine_active,
+                    "unit": unit,
+                    "ts": ts,
+                }
+            elif key == DESC_KOMBI_ELEC_RANGE:
+                range_km = _to_km(_to_decimal(value), unit)
+                if range_km is not None:
+                    signals["electric_range_km"] = {
+                        "value": float(range_km),
+                        "unit": "km",
+                        "ts": ts,
+                    }
+
+        if coordinates_changed and current_lat is not None and current_lon is not None:
+            points.append(
+                {
+                    "ts": ts,
+                    "lat": current_lat,
+                    "lon": current_lon,
+                    "signals": {name: dict(signal) for name, signal in signals.items()},
+                }
+            )
+        elif not coordinates_changed and points and altitude_updated:
+            points[-1]["signals"]["altitude_m"] = dict(signals["altitude_m"])
+
+    return points
+
+
 def _to_liters(num: Decimal | None, unit: str) -> Decimal | None:
     if num is None:
         return None
@@ -151,7 +247,7 @@ def _lock_state(key_lower: str, val_str: str) -> Optional[str]:
     return None
 
 
-@shared_task
+@shared_task(ignore_result=True)
 def merge_bmw_events():
     now = timezone.now()
 
@@ -255,7 +351,6 @@ def process_vehicle_stream(
     ignition_off_at = None
     saw_summary = False
     last_odo_km: Optional[Decimal] = None
-    last_fuel_liters: Optional[Decimal] = None
     last_lock_state: Optional[str] = None
     session_clusters: List[tuple[VehicleSession, List[BMWCarDataEvent]]] = []
 
@@ -267,7 +362,8 @@ def process_vehicle_stream(
             session = save_session(
                 vehicle, cluster, activity_override=activity_override
             )
-            session_clusters.append((session, cluster))
+            if session is not None:
+                session_clusters.append((session, cluster))
 
         buffer = []
         in_drive = False
@@ -305,26 +401,6 @@ def process_vehicle_stream(
             cur_odo_km = _to_km(_to_decimal(raw_val), unit)
 
         cur_lock_state = _lock_state(key_lower, val_str)
-        fuel_level_liters = (
-            _to_liters(_to_decimal(raw_val), unit)
-            if key_lower == DESC_REMAINING_FUEL
-            else None
-        )
-        refuel_level_jump = (
-            fuel_level_liters is not None
-            and last_fuel_liters is not None
-            and fuel_level_liters - last_fuel_liters >= REFUEL_LEVEL_JUMP_LITERS
-        )
-
-        if fuel_level_liters is not None:
-            last_fuel_liters = fuel_level_liters
-
-        if in_drive and refuel_level_jump:
-            previous_odometer = last_odo_km
-            flush(VehicleSession.ActivityType.DRIVE)
-            buffer.append(ev)
-            last_odo_km = previous_odometer
-            continue
 
         if not buffer:
             buffer.append(ev)
@@ -503,9 +579,9 @@ def save_session(
     vehicle: Vehicle,
     cluster: List[BMWCarDataEvent],
     activity_override: Optional[str] = None,
-) -> VehicleSession:
+) -> Optional[VehicleSession]:
     merged_state = {}
-    route_points = []
+    route_samples = []
     keys_seen = set()
     door_statuses = []
 
@@ -593,8 +669,15 @@ def save_session(
         ) or (key_lower == DESC_PORT_STATUS and val_upper == "CONNECTED"):
             is_charging = True
 
-        if key_lower in {DESC_LAT, DESC_LON, DESC_LIVE_HV_SOC}:
-            route_points.append(
+        if key_lower in {
+            DESC_LAT,
+            DESC_LON,
+            # DESC_ALTITUDE,
+            DESC_LIVE_HV_SOC,
+            DESC_ENGINE_ACTIVE,
+            DESC_KOMBI_ELEC_RANGE,
+        }:
+            route_samples.append(
                 {
                     "ts": ev.event_time.isoformat() if ev.event_time else None,
                     "key": key,
@@ -638,6 +721,17 @@ def save_session(
         activity = VehicleSession.ActivityType.ACCESS
     else:
         activity = VehicleSession.ActivityType.OTHER
+
+    if activity in {
+        VehicleSession.ActivityType.LOCK,
+        VehicleSession.ActivityType.UNLOCK,
+        VehicleSession.ActivityType.ACCESS,
+    }:
+        BMWCarDataEvent.objects.filter(id__in=[e.id for e in cluster]).update(
+            processed=True,
+            session=None,
+        )
+        return None
 
     electric_dist_km = None
     distance_split_source = ""
@@ -790,6 +884,12 @@ def save_session(
     else:
         ice_engine_ran = False
 
+    route_points = (
+        _build_route_points(route_samples)
+        if activity == VehicleSession.ActivityType.DRIVE
+        else []
+    )
+
     session = VehicleSession.objects.create(
         vehicle=vehicle,
         activity_type=activity,
@@ -812,11 +912,7 @@ def save_session(
         ice_engine_ran=ice_engine_ran,
         start_soc=start_soc,
         end_soc=end_soc,
-        route_points=(
-            json.loads(json.dumps(route_points, cls=DjangoJSONEncoder))
-            if activity == VehicleSession.ActivityType.DRIVE
-            else []
-        ),
+        route_points=json.loads(json.dumps(route_points, cls=DjangoJSONEncoder)),
     )
 
     BMWCarDataEvent.objects.filter(id__in=[e.id for e in cluster]).update(

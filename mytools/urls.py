@@ -11,12 +11,19 @@ from .views import (
     BillsStatsView,
 )
 
+from .views.vehicle import VehiceSessionListView, VehicleSessionDetailsView
+
 urlpatterns = [
     path("etfs/list", EfsListView.as_view()),
     path("etfs/events", EfsEventsListView.as_view()),
     path("etfs/metrics", EtfsMetrics.as_view()),
+    #
     path("solar/performance", SolarPerformanceView.as_view()),
     path("solar/generation", SolarGenerationView.as_view()),
+    #
     path("bills/stats", BillsStatsView.as_view()),
     path("bills/electricity_costs", ElectricityCostView.as_view()),
+    #
+    path("vehicle/sessions", VehiceSessionListView.as_view()),
+    path("vehicle/session_details", VehicleSessionDetailsView.as_view()),
 ]

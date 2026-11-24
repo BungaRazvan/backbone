@@ -34,7 +34,7 @@ def get_month_range_for_billing_cycle(year: int, month: int, cycle_day: int):
 
     return (
         datetime.date(start_year, start_month, cycle_day),
-        datetime.date(year, month, cycle_day),
+        datetime.date(year, month, cycle_day) - datetime.timedelta(days=1),
     )
 
 
@@ -107,9 +107,7 @@ class SolarPerformanceView(APIView):
             )
 
         totals = totals.aggregate(
-            battery_charge=Sum(
-                "idp_battery_charge_kwh", output_field=DecimalField()
-            ),
+            battery_charge=Sum("idp_battery_charge_kwh", output_field=DecimalField()),
             battery_discharge=Sum(
                 "idp_battery_discharge_kwh", output_field=DecimalField()
             ),

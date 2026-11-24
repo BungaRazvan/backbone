@@ -164,7 +164,7 @@ class VehicleSession(AutoStrMixin, models.Model):
     route_points = models.JSONField(
         default=list,
         blank=True,
-        help_text="Individual GPS/SOC signal samples with timestamps; different signals may be sampled at different times.",
+        help_text="GPS points with provider-neutral route signals and per-signal timestamps.",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)

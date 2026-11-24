@@ -1,4 +1,5 @@
 from functools import wraps
+from typing import Union, get_args, get_origin, get_type_hints
 from django.http import HttpResponseForbidden, HttpRequest, request
 
 from common.utils import get_api_key
@@ -85,11 +86,22 @@ def validate_arguments(dataclass_cls):
         def _wrapped_view(request, *args, **kwargs):
 
             incoming_data = {}
+            query_params = (
+                request.query_params
+                if hasattr(request, "query_params")
+                else request.GET
+            )
 
-            if hasattr(request, "query_params") and request.query_params:
-                incoming_data.update(request.query_params.dict())
-            elif request.GET:
-                incoming_data.update(request.GET.dict())
+            if query_params:
+                incoming_data.update(query_params.dict())
+
+                for field_name, field_type in get_type_hints(dataclass_cls).items():
+                    if _is_list_type(field_type) and field_name in query_params:
+                        incoming_data[field_name] = [
+                            item.strip()
+                            for value in query_params.getlist(field_name)
+                            for item in value.split(",")
+                        ]
 
             if hasattr(request, "data") and request.data:
                 if hasattr(request.data, "dict"):
@@ -112,3 +124,14 @@ def validate_arguments(dataclass_cls):
         return _wrapped_view
 
     return decorator
+
+
+def _is_list_type(annotation):
+    origin = get_origin(annotation)
+
+    if origin is list:
+        return True
+
+    return origin is Union and any(
+        get_origin(arg) is list for arg in get_args(annotation)
+    )

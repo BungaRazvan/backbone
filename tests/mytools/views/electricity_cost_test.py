@@ -13,7 +13,7 @@ def setup_test_data(db):
     ElectricityBill.objects.create(
         e_bill=bill,
         e_from_date=date(2026, 5, 15),
-        e_to_date=date(2026, 6, 15),
+        e_to_date=date(2026, 6, 14),
         e_kwh_used=Decimal("100.00"),
         e_unit_rate=Decimal("0.20"),
         e_total_cost=Decimal("10.50"),
@@ -25,7 +25,7 @@ def setup_test_data(db):
     SegBill.objects.create(
         s_bill=bill,
         s_from_date=date(2026, 5, 15),
-        s_to_date=date(2026, 6, 15),
+        s_to_date=date(2026, 6, 14),
         s_kwh_used=Decimal("15.00"),
         s_unit_rate=Decimal("0.10"),
         s_total_cost=Decimal("5.40"),
@@ -153,7 +153,7 @@ class TestElectricityCostView:
             ElectricityBill.objects.create(
                 e_bill=bill,
                 e_from_date=date(2026, 5, 15),
-                e_to_date=date(2026, 6, 15),
+                e_to_date=date(2026, 6, 14),
                 e_kwh_used=Decimal("100.00"),
                 e_unit_rate=Decimal("0.20"),
                 e_total_cost=Decimal("10.50"),
@@ -191,7 +191,7 @@ class TestElectricityCostView:
                         b_date=date(2026, 6, 15), b_provider="EDF"
                     ),
                     s_from_date=date(2026, 5, 15),
-                    s_to_date=date(2026, 6, 15),
+                    s_to_date=date(2026, 6, 14),
                     s_kwh_used=Decimal("15.00"),
                     s_unit_rate=Decimal("0.10"),
                     s_total_cost=Decimal("5.40"),
