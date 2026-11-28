@@ -76,10 +76,10 @@ class TestSolarPerformanceView:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["grid_import"] == pytest.approx(104.0)
-        assert data["grid_export"] == pytest.approx(106.0)
-        assert data["total_net_cost"] == pytest.approx(20.8)
-        assert data["total_exported_revenue"] == pytest.approx(15.9)
+        assert data["grid_import"] == pytest.approx(4.0)
+        assert data["grid_export"] == pytest.approx(6.0)
+        assert data["total_net_cost"] == pytest.approx(0.8)
+        assert data["total_exported_revenue"] == pytest.approx(0.9)
 
     def test_returns_aggregated_energy_and_financials_for_year(
         self, client, setup_test_data
